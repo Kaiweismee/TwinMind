@@ -1,0 +1,1243 @@
+/* —— 圖譜：緊湊心智圖 —— */
+.mind-map-host,
+.stance-chart-host {
+  overflow: visible;
+  min-height: auto;
+}
+.mind-map-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+.mind-map-compact-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #312e81;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  text-align: center;
+  line-height: 1.35;
+}
+.mind-map-topic-block {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fafafa;
+}
+.mind-map-topic-title {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #4338ca;
+  background: #eef2ff;
+  border-bottom: 1px solid #e0e7ff;
+}
+.mind-map-quote-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+.mind-map-quote-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+}
+.mind-map-quote-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.mind-map-quote-who strong {
+  font-size: 0.82rem;
+}
+.mind-map-quote-text {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #374151;
+}
+.mind-map-topic-empty {
+  margin: 10px;
+}
+
+/* —— 圖譜：意見對照（靜態階段） —— */
+.stance-phase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px;
+  padding: 12px;
+}
+.stance-phase-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+}
+.stance-phase-col:hover {
+  border-color: #a5b4fc;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.12);
+  transform: translateY(-1px);
+}
+.stance-phase-col--aligned {
+  background: linear-gradient(180deg, #ecfdf5 0%, #fff 55%);
+  border-color: #a7f3d0;
+}
+.stance-phase-col--split {
+  background: linear-gradient(180deg, #fff7ed 0%, #fff 55%);
+  border-color: #fed7aa;
+}
+.stance-phase-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+.stance-phase-badge--aligned {
+  background: #d1fae5;
+  color: #047857;
+}
+.stance-phase-badge--split {
+  background: #ffedd5;
+  color: #c2410c;
+}
+.stance-phase-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.stance-phase-avatars {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  justify-content: center;
+}
+.stance-phase-avatar-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stance-phase-avatar-group--split + .stance-phase-avatar-group--split {
+  margin-top: 2px;
+}
+.stance-phase-avatar-chip .avatar {
+  width: 36px;
+  height: 36px;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+.stance-phase-tap {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.stance-phase-modal {
+  max-width: 480px;
+  width: calc(100% - 32px);
+  max-height: min(80vh, 560px);
+  display: flex;
+  flex-direction: column;
+}
+.stance-phase-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+}
+.modal-close-btn {
+  border: none;
+  background: #f3f4f6;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--text-secondary);
+}
+.modal-close-btn:hover {
+  background: #e5e7eb;
+}
+.stance-phase-modal-body {
+  overflow-y: auto;
+  padding: 14px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.stance-phase-modal-status {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 10px;
+  text-align: center;
+}
+.stance-phase-modal-status--aligned {
+  background: #ecfdf5;
+  color: #047857;
+}
+.stance-phase-modal-status--split {
+  background: #fff7ed;
+  color: #c2410c;
+}
+.stance-phase-modal-topic {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+.stance-opinion-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fafafa;
+}
+.stance-opinion-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.stance-opinion-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stance-opinion-meta strong {
+  font-size: 0.88rem;
+}
+.stance-opinion-score {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.stance-opinion-quote {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #374151;
+}
+
+.mind-map-svg--vertical {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 180px;
+}
+.mind-map-host {
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 420px;
+}
+.stance-chart-line {
+  stroke-width: 2.5;
+  opacity: 0.85;
+}
+.stance-chart-phase-hit {
+  pointer-events: all;
+}
+.stance-chart-axis-label {
+  font-family: var(--font);
+  font-size: 9px;
+  fill: var(--text-muted);
+}
+
+/* —— 放射狀手繪心智圖 —— */
+.mind-map-svg--radial {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  background: linear-gradient(180deg, #fefefe 0%, #f8fafc 100%);
+  border-radius: 12px;
+}
+.mind-map-host {
+  overflow: hidden;
+  max-height: none;
+  padding: 0;
+}
+.mind-map-sketch-line {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  opacity: 0.75;
+}
+.mind-map-sketch-line--leaf {
+  stroke-width: 1.6;
+  opacity: 0.55;
+}
+.mind-map-cloud {
+  fill: #eff6ff;
+  stroke: #2563eb;
+  stroke-width: 2.5;
+}
+.mind-map-center-text {
+  font-family: "PingFang TC", "Noto Sans TC", -apple-system, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  fill: #1e3a8a;
+  pointer-events: none;
+}
+.mind-map-branch-icon {
+  font-size: 12px;
+  pointer-events: none;
+}
+.mind-map-branch-label {
+  font-family: "PingFang TC", "Noto Sans TC", -apple-system, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+}
+.mind-map-leaf-text {
+  font-family: "PingFang TC", "Noto Sans TC", -apple-system, sans-serif;
+  font-size: 9.5px;
+  line-height: 1.35;
+  font-weight: 500;
+  margin: 0;
+  word-break: break-word;
+}
+
+.mind-map-leaf-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+.mind-map-leaf-avatar {
+  flex-shrink: 0;
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 0.55rem !important;
+  margin-top: 1px;
+}
+.mind-map-leaf-body {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.mind-map-leaf-speaker {
+  font-family: "PingFang TC", "Noto Sans TC", -apple-system, sans-serif;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--leaf-accent, #374151);
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+.mind-map-leaf-quote {
+  font-family: "PingFang TC", "Noto Sans TC", -apple-system, sans-serif;
+  font-size: 9px;
+  line-height: 1.35;
+  color: #374151;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mind-map-leaf-card-bg {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.08));
+}
+.mind-map-host {
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 520px;
+}
+.mind-map-svg--radial {
+  max-height: none;
+}
+
+/* —— 心智圖：中心 + 分支列表（絕不重疊） —— */
+.mind-map-hub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 12px 10px 16px;
+  background: linear-gradient(180deg, #fafbff 0%, #fff 100%);
+}
+.mind-map-hub-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.mind-map-hub-cloud {
+  position: relative;
+  max-width: 92%;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 2.5px solid #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  text-align: center;
+  line-height: 1.35;
+}
+.mind-map-hub-stem {
+  width: 3px;
+  height: 18px;
+  margin: 4px 0 0;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #93c5fd, #6366f1);
+}
+.mind-map-hub-spokes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}
+@media (min-width: 360px) {
+  .mind-map-hub-spokes {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.mind-map-spoke {
+  border: 1.5px solid var(--spoke-stroke, #c7d2fe);
+  border-radius: 12px;
+  background: var(--spoke-fill, #f8fafc);
+  overflow: hidden;
+  min-width: 0;
+}
+.mind-map-spoke-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.65);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.mind-map-spoke-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--spoke-stroke);
+}
+.mind-map-spoke-title {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--spoke-stroke);
+  line-height: 1.25;
+}
+.mind-map-spoke-quotes {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mind-map-quote-item {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 8px 9px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.mind-map-quote-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.mind-map-quote-who strong {
+  font-size: 0.74rem;
+  color: #111827;
+}
+.mind-map-quote-who .avatar {
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 0.55rem !important;
+  flex-shrink: 0;
+}
+.mind-map-quote-text {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #374151;
+  word-break: break-word;
+}
+.mind-map-spoke-empty {
+  margin: 0;
+  padding: 12px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+.mind-map-host {
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 520px;
+}
+
+.mind-map-svg--radial {
+  display: block;
+  width: 100%;
+  min-height: 280px;
+  background: linear-gradient(180deg, #fefefe 0%, #f8fafc 100%);
+  border-radius: 12px;
+}
+.mind-map-leaf-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+}
+.mind-map-leaf-card .avatar {
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 0.5rem !important;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.mind-map-leaf-body {
+  flex: 1;
+  min-width: 0;
+}
+.mind-map-leaf-speaker {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--leaf-accent, #374151);
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+.mind-map-leaf-quote {
+  font-size: 8.5px;
+  line-height: 1.35;
+  color: #374151;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mind-map-cloud {
+  fill: #eff6ff;
+  stroke: #2563eb;
+  stroke-width: 2.5;
+}
+.mind-map-center-text {
+  font-family: "PingFang TC", "Noto Sans TC", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  fill: #1e3a8a;
+  pointer-events: none;
+}
+.mind-map-sketch-line {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  opacity: 0.8;
+}
+.mind-map-sketch-line--leaf {
+  stroke-width: 1.6;
+  opacity: 0.55;
+}
+.mind-map-host {
+  overflow: auto;
+  max-height: 560px;
+}
+
+/* —— 發言時間軸（橫向滑動） —— */
+.stance-timeline {
+  padding: 10px 0 4px;
+}
+.stance-timeline-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.stance-timeline-hint span {
+  color: #6366f1;
+  font-weight: 700;
+}
+.stance-timeline-scroll {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 4px 12px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.stance-timeline-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.stance-timeline-scroll::-webkit-scrollbar-thumb {
+  background: #c7d2fe;
+  border-radius: 4px;
+}
+.stance-timeline-card {
+  flex: 0 0 220px;
+  scroll-snap-align: start;
+  background: #fff;
+  border: 2px solid var(--tl-accent, #c7d2fe);
+  border-radius: 12px;
+  padding: 10px 11px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 140px;
+}
+.stance-timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.stance-timeline-step {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--tl-accent, #4f46e5);
+  background: #f5f3ff;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.stance-timeline-phase {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.stance-timeline-score {
+  font-size: 0.62rem;
+  color: #9ca3af;
+  margin-left: auto;
+}
+.stance-timeline-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stance-timeline-who strong {
+  font-size: 0.82rem;
+}
+.stance-timeline-who .avatar {
+  width: 28px !important;
+  height: 28px !important;
+}
+.stance-timeline-quote {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: #374151;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.stance-chart-host {
+  overflow: hidden;
+  min-height: 180px;
+}
+
+
+/* —— 發言重點圖（與圖譜面板同系） —— */
+.stance-chart-host {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  min-height: 200px;
+  padding: 0;
+}
+
+.stance-matrix-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: linear-gradient(180deg, #fafafa 0%, #fff 32%);
+}
+
+.stance-matrix-toolbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+.stance-matrix-toolbar-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.stance-matrix-toolbar-meta {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.stance-matrix-scroll-outer {
+  position: relative;
+}
+.stance-matrix-scroll-outer::before,
+.stance-matrix-scroll-outer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  z-index: 3;
+  pointer-events: none;
+}
+.stance-matrix-scroll-outer::before {
+  left: 0;
+  background: linear-gradient(90deg, #fff 0%, transparent 100%);
+}
+.stance-matrix-scroll-outer::after {
+  right: 0;
+  background: linear-gradient(270deg, #fff 0%, transparent 100%);
+}
+
+.stance-matrix-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px 8px 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-border) transparent;
+}
+.stance-matrix-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.stance-matrix-scroll::-webkit-scrollbar-thumb {
+  background: var(--accent-border);
+  border-radius: var(--radius-pill);
+}
+
+.stance-matrix-plot {
+  position: relative;
+  min-height: 280px;
+}
+
+.stance-matrix-axis-rail {
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 40px;
+  width: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-right: 6px;
+  pointer-events: none;
+  z-index: 1;
+}
+.stance-matrix-axis-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.2;
+  text-align: right;
+}
+.stance-matrix-axis-label--top { color: var(--accent); }
+.stance-matrix-axis-label--bottom { color: var(--text-secondary); }
+
+.stance-matrix-col {
+  position: absolute;
+  background: rgba(99, 102, 241, 0.03);
+  border-left: 1px dashed rgba(199, 210, 254, 0.65);
+  border-right: 1px dashed rgba(199, 210, 254, 0.35);
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.stance-matrix-gridline {
+  position: absolute;
+  left: 48px;
+  right: 8px;
+  height: 1px;
+  background: var(--border);
+  opacity: 0.65;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.stance-matrix-wrap--map .stance-matrix-gridline {
+  opacity: 0.85;
+  background: linear-gradient(90deg, transparent, var(--accent-border) 8%, var(--accent-border) 92%, transparent);
+}
+
+.stance-matrix-flow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.stance-matrix-flow-path {
+  fill: none;
+  stroke: var(--accent-border);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+.stance-matrix-card {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+  overflow: hidden;
+}
+.stance-matrix-card:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.14);
+  transform: translateY(-2px);
+}
+.stance-matrix-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.stance-matrix-card-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--mx-accent, var(--accent));
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.stance-matrix-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 11px 10px 12px;
+  min-height: 76px;
+}
+
+.stance-matrix-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.stance-matrix-card-head .avatar {
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 0.58rem !important;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px #fff;
+}
+.stance-matrix-card-who {
+  flex: 1;
+  min-width: 0;
+}
+.stance-matrix-card-name {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stance-matrix-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+.stance-matrix-badge {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  line-height: 1.2;
+}
+.stance-matrix-badge--step {
+  background: var(--accent-soft);
+  color: #4338ca;
+  border: 1px solid var(--accent-border);
+}
+.stance-matrix-badge--phase {
+  background: #f9fafb;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.stance-matrix-score-pill {
+  flex-shrink: 0;
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--mx-accent, var(--accent));
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+}
+
+.stance-matrix-card-highlight {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.stance-matrix-card-foot {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+.stance-matrix-tick {
+  position: absolute;
+  z-index: 1;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  pointer-events: none;
+}
+
+.stance-matrix-hint {
+  margin: 0;
+  padding: 8px 12px 10px;
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  background: #fff;
+}
+.stance-matrix-hint-arrow {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.stance-gap-chip--info {
+  background: var(--accent-soft);
+  color: #4338ca;
+  border: 1px solid var(--accent-border);
+}
+
+.stance-timeline-detail-highlight {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #3730a3;
+  line-height: 1.5;
+}
+
+/* 心智圖區塊統一 */
+.mind-map-host {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  overflow: auto;
+  min-height: 180px;
+  padding: 0;
+}
+
+
+
+/* 發言重點：參考圖泡泡卡 + 時間×立場矩陣 */
+.stance-matrix-wrap--map .stance-matrix-plot--map {
+  min-height: 340px;
+}
+
+.stance-matrix-wrap--map .stance-matrix-scroll {
+  max-height: 380px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.stance-matrix-axis-label--sim {
+  font-size: 0.58rem;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.stance-bubble-card {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0;
+  min-height: 52px;
+  padding: 7px 9px 7px 8px;
+  border: 2px solid var(--bubble-accent, #b8860b);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: transform 0.12s, box-shadow 0.15s;
+}
+.stance-bubble-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+.stance-bubble-card:focus-visible {
+  outline: 2px solid var(--bubble-accent, var(--accent));
+  outline-offset: 2px;
+}
+
+.stance-bubble-card .avatar {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px;
+  font-size: 0.58rem !important;
+  flex-shrink: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.stance-bubble-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stance-bubble-name {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--bubble-accent, #b8860b);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.stance-bubble-highlight {
+  margin: 0;
+  font-size: 0.66rem;
+  line-height: 1.38;
+  color: #374151;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.stance-matrix-wrap--map .stance-matrix-tick {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+}
+
+.stance-matrix-wrap--map .stance-matrix-flow-path {
+  stroke: #d4d4d8;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 6;
+  opacity: 0.7;
+}
+
+/* —— 心智圖歷史預覽（右下角點 + 置中覆蓋） —— */
+.mind-map-host {
+  position: relative;
+  padding-bottom: 0;
+}
+.mind-map-history-launcher {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 6;
+  min-width: 58px;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: rgba(249, 250, 251, 0.96);
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
+  transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.mind-map-history-launcher:hover {
+  transform: translateY(-1px);
+  border-color: #9ca3af;
+  color: #4b5563;
+}
+.mind-map-history-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(2px);
+}
+.mind-map-history-modal {
+  position: relative;
+  width: min(96%, 860px);
+  max-height: calc(100% - 18px);
+  padding: 12px 12px 10px;
+  border-radius: 14px;
+  border: 1px solid #d7deea;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.24);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mind-map-history-close {
+  position: absolute;
+  right: 8px;
+  top: 7px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #64748b;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.mind-map-history-close:hover {
+  background: #f8fafc;
+}
+.mind-map-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: 36px;
+}
+.mind-map-history-head strong {
+  font-size: 0.78rem;
+  color: #334155;
+}
+.mind-map-history-step {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+.mind-map-history-preview-host {
+  height: min(62vh, 560px);
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid #e6ebf4;
+  background: #f8fafc;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mind-map-history-preview-host .mind-map-svg--radial {
+  max-height: 100%;
+}
+.mind-map-history-preview-host .mind-map-svg--history-preview {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+.mind-map-history-modal-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mind-map-history-range {
+  width: 100%;
+  margin: 0;
+}
+.mind-map-history-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.mind-map-history-btn {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #334155;
+  border-radius: 7px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 5px 7px;
+  cursor: pointer;
+}
+.mind-map-history-btn:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+.mind-map-history-btn.is-active {
+  border-color: #a5b4fc;
+  background: #eef2ff;
+  color: #3730a3;
+}
+.mind-map-history-meta {
+  text-align: right;
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+/* 顯示完整文字：覆蓋前面的截斷規則 */
+.mind-map-svg .mind-map-leaf-body {
+  overflow: visible !important;
+}
+.mind-map-svg .mind-map-leaf-quote {
+  display: block !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: initial !important;
+  overflow: visible !important;
+  max-height: none !important;
+  white-space: normal !important;
+}

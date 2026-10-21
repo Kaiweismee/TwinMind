@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>分身有術 · 媒體庫</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #4f46e5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang TC", "Noto Sans TC", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 22px 18px 32px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.45rem;
+    }
+    .sub {
+      margin: 6px 0 16px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .sub a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) 180px 170px auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .input, .select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 11px;
+      font-size: 0.92rem;
+      background: #fff;
+      color: var(--text);
+    }
+    .btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn:hover { background: #f9fafb; }
+    .stats {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .chip {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #fff;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      color: #374151;
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      padding: 12px;
+    }
+    .item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
+    }
+    .thumb {
+      height: 132px;
+      background: #f3f4f6;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      font-size: 0.85rem;
+      overflow: hidden;
+    }
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .body {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+    .name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #111827;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+      min-height: 40px;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: auto;
+    }
+    .type {
+      font-size: 0.72rem;
+      color: #4b5563;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 3px 7px;
+    }
+    .link {
+      font-size: 0.8rem;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .empty {
+      padding: 28px 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    @media (max-width: 900px) {
+      .toolbar {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>實驗室 · 媒體庫</h1>
+    <p class="sub">這裡會列出你曾上傳過的照片與資料檔案。<a href="/">返回主頁</a></p>
+
+    <div class="toolbar">
+      <input id="q" class="input" type="search" placeholder="搜尋檔名或討論主題" />
+      <select id="kind" class="select">
+        <option value="all">全部類型</option>
+        <option value="image">圖片</option>
+        <option value="file">文件</option>
+      </select>
+      <select id="source" class="select">
+        <option value="all">全部來源</option>
+        <option value="twin_chat">訓練個人資料</option>
+        <option value="session_context">聊天室參考資料</option>
+      </select>
+      <button id="btnReload" class="btn" type="button">重新整理</button>
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <section class="panel">
+      <div class="grid" id="grid"></div>
+      <p class="empty" id="empty" hidden>尚未找到媒體檔案。</p>
+    </section>
+  </div>
+
+  <script>
+    const grid = document.getElementById("grid");
+    const empty = document.getElementById("empty");
+    const stats = document.getElementById("stats");
+    const q = document.getElementById("q");
+    const kind = document.getElementById("kind");
+    const source = document.getElementById("source");
+    const btnReload = document.getElementById("btnReload");
+
+    let allItems = [];
+    let summary = { count: 0, image_count: 0, file_count: 0 };
+
+    function fmtSize(n) {
+      const v = Number(n || 0);
+      if (v >= 1024 * 1024) return `${(v / (1024 * 1024)).toFixed(1)} MB`;
+      if (v >= 1024) return `${Math.round(v / 1024)} KB`;
+      return `${v} B`;
+    }
+
+    function fmtTime(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toLocaleString("zh-TW", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+
+    function sourceLabel(s) {
+      return s === "session_context" ? "聊天室參考資料" : "訓練個人資料";
+    }
+
+    function buildStats(items) {
+      const imageN = items.filter((i) => (i.file || {}).kind === "image").length;
+      const fileN = items.length - imageN;
+      stats.innerHTML = `
+        <span class="chip">共 ${items.length} 筆</span>
+        <span class="chip">圖片 ${imageN}</span>
+        <span class="chip">文件 ${fileN}</span>
+      `;
+    }
+
+    function render() {
+      const text = q.value.trim().toLowerCase();
+      const kindVal = kind.value;
+      const sourceVal = source.value;
+      const items = allItems.filter((item) => {
+        const f = item.file || {};
+        if (kindVal !== "all" && (f.kind || "file") !== kindVal) return false;
+        if (sourceVal !== "all" && item.source !== sourceVal) return false;
+        if (!text) return true;
+        const hay = [
+          f.name,
+          item.session_topic,
+          sourceLabel(item.source),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(text);
+      });
+
+      buildStats(items);
+      grid.innerHTML = "";
+      if (!items.length) {
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+      for (const item of items) {
+        const f = item.file || {};
+        const card = document.createElement("article");
+        card.className = "item";
+        const thumb = document.createElement("div");
+        thumb.className = "thumb";
+        if ((f.kind || "file") === "image" && f.url) {
+          const img = document.createElement("img");
+          img.src = f.url;
+          img.alt = f.name || "image";
+          img.loading = "lazy";
+          thumb.appendChild(img);
+        } else {
+          thumb.textContent = "檔案";
+        }
+        card.appendChild(thumb);
+
+        const body = document.createElement("div");
+        body.className = "body";
+        body.innerHTML = `
+          <div class="name" title="${escapeHtml(f.name || "未命名檔案")}">${escapeHtml(f.name || "未命名檔案")}</div>
+          <div class="meta">
+            ${escapeHtml(sourceLabel(item.source))}<br>
+            ${item.session_topic ? `主題：${escapeHtml(item.session_topic)}<br>` : ""}
+            ${escapeHtml(fmtTime(item.created_at))} · ${escapeHtml(fmtSize(f.size))}
+          </div>
+          <div class="footer">
+            <span class="type">${escapeHtml((f.kind || "file") === "image" ? "圖片" : "文件")}</span>
+            <a class="link" href="${escapeHtml(f.url || "#")}" target="_blank" rel="noopener">開啟</a>
+          </div>
+        `;
+        card.appendChild(body);
+        grid.appendChild(card);
+      }
+    }
+
+    function escapeHtml(s) {
+      const d = document.createElement("div");
+      d.textContent = s == null ? "" : String(s);
+      return d.innerHTML;
+    }
+
+    async function loadMedia() {
+      grid.innerHTML = "";
+      empty.hidden = true;
+      stats.innerHTML = `<span class="chip">載入中…</span>`;
+      try {
+        const res = await fetch("/api/media-library?limit=800", {
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || res.statusText || "載入失敗");
+        allItems = data.items || [];
+        summary = {
+          count: data.count || 0,
+          image_count: data.image_count || 0,
+          file_count: data.file_count || 0,
+        };
+        render();
+      } catch (err) {
+        allItems = [];
+        const message = String(err?.message || "載入失敗");
+        empty.hidden = false;
+        empty.textContent =
+          /401|請先登入/.test(message)
+            ? "請先登入主頁後，再開啟實驗室媒體庫。"
+            : `載入媒體庫失敗：${message}`;
+        stats.innerHTML = "";
+      }
+    }
+
+    q.addEventListener("input", render);
+    kind.addEventListener("change", render);
+    source.addEventListener("change", render);
+    btnReload.addEventListener("click", loadMedia);
+
+    loadMedia();
+  </script>
+</body>
+</html>

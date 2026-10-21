@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>分身有術</title>
+  <link rel="icon" type="image/png" href="/static/icon.png" />
+  <link rel="apple-touch-icon" href="/static/icon.png" />
+  <link rel="stylesheet" href="/static/app.css?v=split96" />
+</head>
+<body>
+  <div class="auth-gate" id="authGate">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <img src="/static/icon.png" alt="" width="48" height="48" />
+        <h1>分身有術</h1>
+        <p class="auth-tagline">與歷史名人、科技領袖的數位分身對話</p>
+      </div>
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab active" data-auth-tab="login" role="tab">登入</button>
+        <button type="button" class="auth-tab" data-auth-tab="register" role="tab">註冊</button>
+      </div>
+      <form class="auth-form" id="loginForm">
+        <label class="auth-field">
+          <span>Email 或使用者名稱</span>
+          <input type="text" id="loginInput" autocomplete="username" required />
+        </label>
+        <label class="auth-field">
+          <span>密碼</span>
+          <input type="password" id="loginPassword" autocomplete="current-password" required minlength="8" />
+        </label>
+        <p class="auth-error hidden" id="loginError"></p>
+        <button type="submit" class="btn-primary auth-submit" id="btnLogin">登入</button>
+      </form>
+      <form class="auth-form hidden" id="registerForm">
+        <label class="auth-field">
+          <span>Email</span>
+          <input type="email" id="registerEmail" autocomplete="email" required />
+        </label>
+        <label class="auth-field">
+          <span>密碼</span>
+          <input type="password" id="registerPassword" autocomplete="new-password" required minlength="8" />
+        </label>
+        <label class="auth-field">
+          <span>使用者名稱</span>
+          <input type="text" id="registerUsername" autocomplete="username" required pattern="[A-Za-z0-9_]{3,32}" title="3–32 字，英文、數字、底線" />
+        </label>
+        <fieldset class="auth-field auth-preset-field">
+          <legend>第一個分身類型</legend>
+          <div class="register-preset-picker" role="radiogroup" aria-label="分身類型">
+            <label class="register-preset-option">
+              <input type="radio" name="registerPreset" value="life" checked />
+              <span>生活</span>
+            </label>
+            <label class="register-preset-option">
+              <input type="radio" name="registerPreset" value="student" />
+              <span>學生</span>
+            </label>
+            <label class="register-preset-option">
+              <input type="radio" name="registerPreset" value="company" />
+              <span>公司</span>
+            </label>
+          </div>
+        </fieldset>
+        <p class="auth-error hidden" id="registerError"></p>
+        <button type="submit" class="btn-primary auth-submit" id="btnRegister">建立帳號</button>
+      </form>
+      <div class="auth-divider" id="authSocialDivider"><span>或使用以下方式登入</span></div>
+      <div class="auth-social">
+        <button type="button" class="auth-social-btn" id="btnAuthGoogle">
+          <span class="auth-social-icon auth-social-icon--plain" aria-hidden="true">
+            <img src="/static/google_icon.png" alt="" class="auth-social-icon-img" />
+          </span>
+          <span>使用 Google 帳號</span>
+        </button>
+        <button type="button" class="auth-social-btn" id="btnAuthApple">
+          <span class="auth-social-icon auth-social-icon--plain" aria-hidden="true">
+            <img src="/static/qpple_icon.svg" alt="" class="auth-social-icon-img" />
+          </span>
+          <span>使用 Apple 帳號</span>
+        </button>
+      </div>
+      <button type="button" class="auth-guest-btn hidden" id="btnShowGuestJoin">以訪客身份加入討論室</button>
+      <form class="auth-form auth-guest-form hidden" id="guestJoinForm">
+        <p class="auth-error hidden" id="guestJoinError"></p>
+      </form>
+    </div>
+  </div>
+
+  <div class="app hidden" id="appRoot">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <a href="/" class="brand-logo">
+          <img src="/static/icon.png" alt="" class="brand-logo-icon" width="32" height="32" />
+          <span>分身有術</span>
+        </a>
+      </div>
+
+      <button type="button" class="btn-create" id="btnCreate">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        建立
+      </button>
+      <button type="button" class="btn-join" id="btnJoin">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+        加入討論
+      </button>
+
+      <nav class="sidebar-nav">
+        <button type="button" class="nav-item active" data-nav="discover">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          主頁
+        </button>
+        <button type="button" class="nav-item" data-nav="create-twin" id="btnCreateTwinNav">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="8" r="3"></circle>
+            <path d="M3 19a6 6 0 0112 0"></path>
+            <path d="M18 8v6"></path>
+            <path d="M15 11h6"></path>
+          </svg>
+          建立數位分身
+        </button>
+        <button type="button" class="nav-item" data-nav="twin-chat">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          訓練個人資料
+        </button>
+        <button type="button" class="nav-item" data-nav="labs">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6v7H9zM6 10h12v4a6 6 0 01-12 0v-4z"/></svg>
+          媒體庫
+        </button>
+      </nav>
+
+      <div class="sidebar-search">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
+        <input type="search" id="historySearch" placeholder="聊天室搜尋" />
+      </div>
+
+      <div class="history" id="historyList">
+        <p class="empty">尚無聊天紀錄</p>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="profile-wrap">
+          <div class="profile-menu hidden" id="profileMenu" role="menu">
+            <div class="profile-menu-head">
+              <strong id="profileMenuName">使用者</strong>
+              <span id="profileMenuEmail"></span>
+            </div>
+            <div class="profile-menu-section">
+              <button type="button" class="profile-menu-item profile-menu-action" id="btnEditProfile">
+                <span class="profile-menu-item-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 20h9"/>
+                    <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                  </svg>
+                </span>
+                <span>編輯個人資料</span>
+              </button>
+            </div>
+            <div class="profile-menu-section">
+              <div class="profile-menu-section-label">數位分身</div>
+              <div class="profile-twin-list" id="profileTwinList"></div>
+            </div>
+            <button type="button" class="profile-menu-item profile-menu-logout" id="btnLogout">
+              <span class="profile-menu-item-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                  <path d="M16 17l5-5-5-5"/>
+                  <path d="M21 12H9"/>
+                </svg>
+              </span>
+              <span>登出</span>
+            </button>
+          </div>
+          <button type="button" class="profile-btn" id="profileBox">
+            <div class="avatar sm" id="profileAvatar">?</div>
+            <span class="profile-name" id="profileName">載入中…</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="discover-view" id="discoverView">
+        <header class="discover-header">
+          <div class="welcome-block">
+            <span class="welcome-label">歡迎回來，<strong id="welcomeName">使用者</strong></span>
+          </div>
+          <div class="hero-search">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
+            <input type="search" id="personSearch" placeholder="名人搜尋" />
+          </div>
+          <div class="notify-wrap" id="notifyWrap">
+            <button type="button" class="btn-icon btn-notify" id="btnNotify" title="通知" aria-label="通知" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+              <span class="notify-badge hidden" id="notifyBadge" aria-hidden="true"></span>
+            </button>
+            <div class="notify-dropdown hidden" id="notifyDropdown" role="menu">
+              <div class="notify-dropdown-head">加入通知</div>
+              <div class="notify-dropdown-body" id="notifyList">
+                <p class="notify-empty">尚無新通知</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div class="discover-home" id="discoverHome">
+          <div class="discover-body">
+            <section class="feed-section">
+              <h2 class="section-heading">為您推薦</h2>
+              <div class="card-row" id="recommendedRow"></div>
+            </section>
+            <section class="feed-section">
+              <h2 class="section-heading">場景</h2>
+              <div class="card-row" id="scenesRow"></div>
+            </section>
+            <section class="feed-section category-section">
+              <div class="category-section-head">
+                <h2 class="section-heading">類別</h2>
+                <nav class="category-nav" id="categoryNav" aria-label="名人類別"></nav>
+              </div>
+              <div class="card-row" id="categoryPersonRow"></div>
+            </section>
+          </div>
+          <aside class="discover-media-rail hidden" id="discoverMediaRail" aria-label="媒體庫">
+            <div class="discover-media-head">
+              <h2>媒體庫</h2>
+              <a class="discover-media-link" href="/lab" target="_blank" rel="noopener">完整檢視</a>
+            </div>
+            <div class="discover-media-stats" id="discoverMediaStats">
+              <span class="discover-media-chip">載入中…</span>
+            </div>
+            <div class="discover-media-list" id="discoverMediaList"></div>
+          </aside>
+        </div>
+      </div>
+
+      <div class="twin-chat-view hidden" id="twinChatView">
+        <header class="twin-chat-header">
+          <div class="twin-chat-hero">
+            <div id="twinChatAvatarHost"></div>
+            <div>
+              <h1 class="twin-chat-title" id="twinChatTitle">生活分身</h1>
+              <p class="twin-chat-subtitle" id="twinChatSubtitle">分享生活點滴，讓我更了解你</p>
+            </div>
+          </div>
+        </header>
+        <div class="twin-chat-messages" id="twinChatMessages">
+          <p class="twin-chat-empty">開始和分身聊聊吧，也可以上傳圖片、PDF 或 Word（.docx）檔案。</p>
+        </div>
+        <div class="twin-composer-wrap">
+          <div class="twin-attach-preview hidden" id="twinAttachPreview"></div>
+          <form class="twin-composer" id="twinChatForm">
+            <input type="file" id="twinFileInput" class="hidden" multiple accept="image/*,.txt,.md,.csv,.json,.pdf,.docx" />
+            <button type="button" class="twin-composer-icon" id="btnTwinAttach" title="附加檔案" aria-label="附加檔案">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <input type="text" id="twinChatInput" placeholder="想問什麼都可以" autocomplete="off" />
+            <button type="button" class="twin-composer-icon" id="btnTwinMic" title="語音輸入" aria-label="語音輸入">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+            </button>
+            <button type="submit" class="twin-composer-send" id="btnTwinSend" aria-label="傳送">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="chat-view" id="chatView">
+        <div class="chat-topbar">
+          <button type="button" class="btn-back" id="btnBack">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            首頁
+          </button>
+          <div class="avatar sm" id="chatAvatar">?</div>
+          <div class="chat-topbar-meta">
+            <strong id="chatTitle">聊天</strong>
+            <p class="chat-subtitle" id="chatSubtitle"></p>
+            <div class="chat-topbar-chips">
+              <div class="participant-chips" id="participantChips"></div>
+              <div class="room-access-chips hidden" id="roomAccessRow"></div>
+            </div>
+          </div>
+          <button type="button" class="btn-insights-top" id="btnInsightsTop" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            <span>討論圖譜</span>
+          </button>
+        </div>
+        <div class="sources-drawer" id="sourcesDrawer">
+          <button type="button" class="sources-drawer-tab" id="sourcesDrawerToggle" aria-expanded="false">
+            <svg class="sources-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
+            <span>參考資料</span>
+            <span class="sources-drawer-hint" id="sourcesDrawerHint">點選句尾的 [1][2] 查看該句依據哪段資料</span>
+            <svg class="sources-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="sources-drawer-body" id="sourcesDrawerBody"></div>
+        </div>
+        <div class="chat-body" id="chatBody">
+          <div class="chat-main">
+            <div class="chat-messages" id="chatMessages">
+              <p class="empty">尚無訊息</p>
+            </div>
+            <div class="chat-composer-wrap">
+              <form class="chat-composer chat-composer--dark" id="chatForm">
+                <div class="chat-reply-picker" id="chatReplyPicker">
+                  <button
+                    type="button"
+                    class="chat-reply-trigger"
+                    id="chatReplyTrigger"
+                    aria-expanded="false"
+                    aria-haspopup="listbox"
+                    aria-controls="chatReplyMenu"
+                  >
+                    <span class="chat-reply-trigger-avatar" id="chatReplyTriggerAvatar"></span>
+                    <span class="chat-reply-trigger-text">
+                      <span class="chat-reply-trigger-label" id="chatReplyTriggerLabel">所有人</span>
+                      <span class="chat-reply-trigger-hint">對象</span>
+                    </span>
+                    <svg class="chat-reply-trigger-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                  </button>
+                  <div class="chat-reply-menu hidden" id="chatReplyMenu" role="listbox" aria-label="選擇溝通對象">
+                    <div class="chat-reply-menu-head">要跟誰說</div>
+                    <div class="chat-reply-menu-list" id="chatReplyMenuList"></div>
+                  </div>
+                </div>
+                <input type="text" id="chatInput" placeholder="想插話就輸入…" autocomplete="off" />
+                <button type="submit" class="chat-composer-send" id="btnSend" aria-label="插話" title="插話">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </button>
+              </form>
+            </div>
+          </div>
+          <div class="insights-rail" id="insightsRail" aria-hidden="true">
+            <button
+              type="button"
+              class="insights-rail-toggle"
+              id="insightsPanelToggle"
+              aria-expanded="false"
+              title="展開討論圖譜"
+              aria-label="展開討論圖譜"
+            >
+              <span class="insights-rail-handle" aria-hidden="true">
+                <svg class="insights-rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                <span class="insights-rail-label">圖譜</span>
+                <svg class="insights-rail-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </span>
+            </button>
+          </div>
+          <aside class="insights-panel" id="insightsPanel" aria-hidden="true">
+            <div class="insights-panel-inner">
+              <div class="insights-panel-head">
+                <div class="insights-panel-head-text">
+                  <h2>討論圖譜</h2>
+                  <p class="insights-panel-hint insights-panel-hint--live">即時更新中 · 每 3 則發言自動 AI 深度分析</p>
+                </div>
+                <button type="button" class="insights-refresh-btn" id="btnInsightsRefresh" title="重新分析" aria-label="重新分析">↻</button>
+              </div>
+              <div class="insights-highlights" id="insightsHighlights"></div>
+              <section class="insights-section insights-section--mindmap">
+                <h3>心智圖</h3>
+                <div class="mind-map-host" id="mindMapHost">
+                  <p class="insights-empty">討論進行中，重點會自動更新…</p>
+                </div>
+              </section>
+              <section class="insights-section">
+                <h3>立場變化</h3>
+                <div class="stance-chart-host" id="stanceChartHost">
+                  <p class="insights-empty">尚無名人發言紀錄</p>
+                </div>
+                <div class="stance-gap-legend" id="stanceGapLegend"></div>
+              </section>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="createModal">
+    <div class="modal modal--create">
+      <div class="modal-header modal-header--create">
+        <div class="modal-header-text">
+          <div class="modal-title">建立討論室</div>
+          <div class="modal-hint">輸入主題、選擇名人，即可開始多人討論</div>
+        </div>
+        <div class="modal-header-actions">
+          <button type="button" class="modal-setting-chip modal-allow-join allow-on" id="btnAllowJoin" aria-pressed="true">
+            <span class="modal-allow-join-icon">✓</span>
+            <span class="modal-allow-join-text">允許加入</span>
+          </button>
+          <div class="modal-join-extras" id="createRoomJoinExtras">
+            <button type="button" class="modal-setting-chip" id="btnUsePassword" aria-pressed="false">密碼</button>
+            <input type="password" class="modal-password-inline hidden" id="roomPassword" placeholder="房間密碼" maxlength="64" autocomplete="new-password" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="modal-topic-wrap">
+          <label for="roomTopic">討論主題</label>
+          <input type="text" id="roomTopic" placeholder="例如：AI 會取代人類工作嗎？" maxlength="120" />
+        </div>
+        <div class="topic-recommend-inline hidden" id="topicRecommendBlock">
+          <p class="topic-recommend-label">主題契合推薦</p>
+          <div class="topic-recommend-panel">
+            <nav class="topic-recommend-tier-nav hidden" id="topicRecommendTierNav" aria-label="契合度分級"></nav>
+            <div class="topic-recommend-row-track" id="topicRecommendTrack"></div>
+          </div>
+          <p class="topic-recommend-hint-text">點選卡片可加入討論</p>
+        </div>
+        <div class="modal-topic-wrap modal-context-wrap">
+          <label>參考資料（選填）</label>
+          <p class="modal-context-hint">上傳文件或圖片，讓名人分身更了解討論背景</p>
+          <div class="create-room-attach-row">
+            <button type="button" class="btn-secondary btn-create-attach" id="btnCreateRoomAttach">附加檔案</button>
+            <input type="file" id="createRoomFiles" class="hidden" multiple accept="image/*,.txt,.md,.csv,.json,.pdf" />
+          </div>
+          <div class="create-room-attach-preview hidden" id="createRoomAttachPreview"></div>
+        </div>
+        <div class="modal-list-label">選擇參與名人</div>
+        <div class="modal-person-search-wrap">
+          <input
+            type="search"
+            id="modalPersonSearch"
+            class="modal-person-search-input"
+            placeholder="搜尋名人（中文 / 英文）"
+            autocomplete="off"
+          />
+        </div>
+        <div class="modal-list" id="modalPersonList"></div>
+      </div>
+      <div class="modal-footer">
+        <span id="selectedCount">已選 0 位名人</span>
+        <button type="button" class="btn-primary" id="btnStartRoom" disabled>開始討論</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="joinModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div>加入討論室</div>
+        <div class="modal-hint">輸入建立者提供的加入碼與密碼</div>
+      </div>
+      <div class="modal-topic-wrap">
+        <label for="joinCode">加入碼</label>
+        <input type="text" id="joinCode" placeholder="例如：A1B2C3" maxlength="12" autocapitalize="characters" />
+        <p class="join-preview" id="joinPreview"></p>
+      </div>
+      <div class="modal-topic-wrap">
+        <label for="joinGuestName">你的暱稱</label>
+        <input type="text" id="joinGuestName" placeholder="例如：小明" maxlength="40" />
+      </div>
+      <div class="modal-topic-wrap">
+        <label for="joinPassword">房間密碼</label>
+        <input type="password" id="joinPassword" placeholder="若房主有設定密碼請填寫" maxlength="64" autocomplete="current-password" />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btnJoinCancel">取消</button>
+        <button type="button" class="btn-primary" id="btnJoinConfirm">加入</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="createTwinModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div>建立數位分身</div>
+        <div class="modal-hint">填寫基本資料，讓分身更貼近你的風格</div>
+      </div>
+      <form id="createTwinModalForm">
+        <div id="createTwinModalCoreFields">
+        <div class="modal-topic-wrap">
+          <label for="createTwinModalName">分身名稱</label>
+          <input type="text" id="createTwinModalName" maxlength="32" placeholder="例如：學習分身" required />
+        </div>
+        <div class="modal-topic-wrap">
+          <label>分身類型</label>
+          <div class="register-preset-picker" id="createTwinModalPresetButtons" role="radiogroup" aria-label="分身類型">
+            <label class="register-preset-option">
+              <input type="radio" name="createTwinModalPreset" value="life" />
+              <span>生活</span>
+            </label>
+            <label class="register-preset-option">
+              <input type="radio" name="createTwinModalPreset" value="student" />
+              <span>學生</span>
+            </label>
+            <label class="register-preset-option">
+              <input type="radio" name="createTwinModalPreset" value="company" />
+              <span>公司</span>
+            </label>
+            <label class="register-preset-option">
+              <input type="radio" name="createTwinModalPreset" value="custom" checked />
+              <span>自訂</span>
+            </label>
+          </div>
+        </div>
+        </div>
+        <div id="createTwinModalExtraFields" class="hidden">
+          <div id="createTwinStep2Fields">
+            <div class="create-twin-style-head">
+              <span class="create-twin-style-step">2</span>
+              <div class="create-twin-style-title-wrap">
+                <h3>思考與決策風格</h3>
+                <p>系統將根據你的選擇自動產生分身個性描述</p>
+              </div>
+            </div>
+            <div class="create-twin-style-card" id="createTwinStyleCard">
+              <div class="create-twin-style-question" data-style-question="decision">
+                <p>做決定時，你偏向？</p>
+                <div class="create-twin-style-options">
+                  <button type="button" class="create-twin-style-option" data-style-value="謹慎評估後再行動">謹慎評估後再行動</button>
+                  <button type="button" class="create-twin-style-option" data-style-value="快速決策、邊做邊修">快速決策、邊做邊修</button>
+                </div>
+              </div>
+              <div class="create-twin-style-question" data-style-question="priority">
+                <p>遇到問題時，你優先考慮？</p>
+                <div class="create-twin-style-options">
+                  <button type="button" class="create-twin-style-option" data-style-value="技術可行性">技術可行性</button>
+                  <button type="button" class="create-twin-style-option" data-style-value="使用者需求">使用者需求</button>
+                </div>
+              </div>
+              <div class="create-twin-style-question" data-style-question="speech">
+                <p>你的說話風格偏向？</p>
+                <div class="create-twin-style-options">
+                  <button type="button" class="create-twin-style-option" data-style-value="條列重點，簡短精確">條列重點，簡短精確</button>
+                  <button type="button" class="create-twin-style-option" data-style-value="完整說明，前因後果">完整說明，前因後果</button>
+                </div>
+              </div>
+              <div class="create-twin-style-question" data-style-question="conflict">
+                <p>面對衝突或意見不合時？</p>
+                <div class="create-twin-style-options">
+                  <button type="button" class="create-twin-style-option" data-style-value="直接表態，說清楚立場">直接表態，說清楚立場</button>
+                  <button type="button" class="create-twin-style-option" data-style-value="先聽完各方，再給意見">先聽完各方，再給意見</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="createTwinStep3Fields" class="hidden">
+            <div class="create-twin-style-head">
+              <span class="create-twin-style-step">3</span>
+              <div class="create-twin-style-title-wrap">
+                <h3>個人文字資料上傳</h3>
+                <p>這是讓分身說話最像你的關鍵，格式支援 .txt 與 .pdf</p>
+              </div>
+            </div>
+            <div class="create-twin-upload-card">
+              <p class="create-twin-upload-label">選擇資料類型（可複選）</p>
+              <div class="create-twin-upload-tags" id="createTwinUploadTags">
+                <button type="button" class="create-twin-upload-tag active" data-upload-tag="報告/作業">報告 / 作業</button>
+                <button type="button" class="create-twin-upload-tag" data-upload-tag="企劃書">企劃書</button>
+                <button type="button" class="create-twin-upload-tag" data-upload-tag="會議紀錄">會議紀錄</button>
+                <button type="button" class="create-twin-upload-tag" data-upload-tag="個人筆記">個人筆記</button>
+                <button type="button" class="create-twin-upload-tag" data-upload-tag="程式說明文件">程式說明文件</button>
+                <button type="button" class="create-twin-upload-tag" data-upload-tag="Line/Slack 對話紀錄">Line / Slack 對話紀錄</button>
+              </div>
+              <label class="create-twin-upload-drop" for="createTwinUploadInput">
+                <span>點擊上傳檔案，或將檔案拖曳至此</span>
+                <small>支援格式：.pdf、.txt、.docx，單檔上限 8MB，可上傳多個檔案</small>
+                <input type="file" id="createTwinUploadInput" multiple accept=".pdf,.txt,.docx" />
+              </label>
+              <div class="create-twin-upload-list hidden" id="createTwinUploadList"></div>
+              <p class="create-twin-upload-note">建立分身後會自動將這些檔案寫入分身知識庫。</p>
+            </div>
+          </div>
+          <div id="createTwinStep4Fields" class="hidden">
+            <div class="create-twin-style-head">
+              <span class="create-twin-style-step">4</span>
+              <div class="create-twin-style-title-wrap">
+                <h3>專題背景知識上傳</h3>
+                <p>讓分身了解這次討論的情境脈絡</p>
+              </div>
+            </div>
+            <div class="create-twin-upload-card">
+              <p class="create-twin-upload-label">選擇文件類型（可複選）</p>
+              <div class="create-twin-upload-tags" id="createTwinProjectUploadTags">
+                <button type="button" class="create-twin-upload-tag active" data-upload-tag="專題企劃書">專題企劃書</button>
+                <button type="button" class="create-twin-upload-tag" data-upload-tag="系統架構說明">系統架構說明</button>
+                <button type="button" class="create-twin-upload-tag" data-upload-tag="會議紀錄">會議紀錄</button>
+                <button type="button" class="create-twin-upload-tag" data-upload-tag="競品分析">競品分析</button>
+                <button type="button" class="create-twin-upload-tag" data-upload-tag="參考論文">參考論文</button>
+              </div>
+              <label class="create-twin-upload-drop" for="createTwinProjectUploadInput">
+                <span>點擊上傳專題相關文件</span>
+                <small>支援格式：.pdf、.txt、.docx，可上傳多個檔案</small>
+                <input type="file" id="createTwinProjectUploadInput" multiple accept=".pdf,.txt,.docx" />
+              </label>
+              <div class="create-twin-upload-list hidden" id="createTwinProjectUploadList"></div>
+              <p class="create-twin-upload-note create-twin-upload-note--muted">
+                這個步驟可以略過，之後從設定頁再補充也可以。
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-topic-wrap hidden" id="createTwinStudentFields">
+          <label>學生基本資料</label>
+          <div class="create-twin-student-grid">
+            <select id="createTwinStudentEducation">
+              <option value="">學歷（請選擇）</option>
+              <option value="elementary">國小</option>
+              <option value="junior">國中</option>
+              <option value="senior">高中</option>
+              <option value="university">大學</option>
+              <option value="master">碩士</option>
+            </select>
+            <select id="createTwinStudentGrade" disabled>
+              <option value="">年級（請先選學歷）</option>
+            </select>
+            <input type="text" id="createTwinStudentUniversity" maxlength="64" placeholder="學校（選填）" />
+            <input type="text" id="createTwinStudentMajor" maxlength="64" placeholder="科系（選填）" />
+            <input type="text" id="createTwinStudentSkills" maxlength="120" placeholder="個人專長（例如：Python、簡報）" />
+            <div class="create-twin-student-intro">
+              <label for="createTwinStudentIntro">個人簡介（用自己的話描述自己）</label>
+              <textarea id="createTwinStudentIntro" rows="3" maxlength="400" placeholder="例如：我目前是資工系大三，喜歡用實作方式學習"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-topic-wrap hidden" id="createTwinCompanyFields">
+          <label>公司基本資料</label>
+          <div class="create-twin-company-grid">
+            <select id="createTwinCompanyIndustry">
+              <option value="">產業別（請選擇）</option>
+              <option value="tech">科技 / 軟體</option>
+              <option value="finance">金融 / 保險</option>
+              <option value="education">教育 / 研究</option>
+              <option value="healthcare">醫療 / 生技</option>
+              <option value="manufacturing">製造 / 供應鏈</option>
+              <option value="service">服務 / 零售</option>
+              <option value="other">其他</option>
+            </select>
+            <select id="createTwinCompanyRoleLevel">
+              <option value="">職位層級（請選擇）</option>
+              <option value="intern">實習 / 初階</option>
+              <option value="staff">一般職員</option>
+              <option value="lead">資深 / 組長</option>
+              <option value="manager">主管 / 經理</option>
+              <option value="director">總監 / 高階主管</option>
+              <option value="founder">創辦人 / 合夥人</option>
+            </select>
+            <input type="text" id="createTwinCompanyName" maxlength="80" placeholder="公司名稱（選填）" />
+            <input type="text" id="createTwinCompanyDepartment" maxlength="64" placeholder="部門（選填）" />
+            <input type="text" id="createTwinCompanyTitle" maxlength="64" placeholder="職稱（選填）" />
+            <input type="text" id="createTwinCompanySkills" maxlength="120" placeholder="工作專長（例如：產品規劃、資料分析）" />
+            <div class="create-twin-company-intro">
+              <label for="createTwinCompanyIntro">工作簡介（用自己的話描述工作內容）</label>
+              <textarea id="createTwinCompanyIntro" rows="3" maxlength="400" placeholder="例如：我在產品部門負責需求分析、跨部門協作與版本規劃"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-topic-wrap hidden" id="createTwinLifeFields">
+          <label>生活基本資料</label>
+          <div class="create-twin-life-grid">
+            <select id="createTwinLifeStage">
+              <option value="">目前生活階段（請選擇）</option>
+              <option value="student">學生生活</option>
+              <option value="new-grad">新鮮人 / 社會新鮮人</option>
+              <option value="working">上班族</option>
+              <option value="freelancer">自由工作者</option>
+              <option value="family">家庭照顧者</option>
+              <option value="other">其他</option>
+            </select>
+            <select id="createTwinLifeRhythm">
+              <option value="">作息節奏（請選擇）</option>
+              <option value="morning">晨型（早睡早起）</option>
+              <option value="mixed">混合型（依工作調整）</option>
+              <option value="night">夜型（晚睡晚起）</option>
+              <option value="irregular">不固定</option>
+            </select>
+            <input type="text" id="createTwinLifeCity" maxlength="48" placeholder="目前所在城市（選填）" />
+            <input type="text" id="createTwinLifeInterests" maxlength="120" placeholder="興趣嗜好（例如：運動、旅遊、閱讀）" />
+            <input type="text" id="createTwinLifeGoals" maxlength="120" placeholder="近期目標（例如：規律作息、學新技能）" />
+            <input type="text" id="createTwinLifeStressRelief" maxlength="120" placeholder="紓壓方式（選填）" />
+            <div class="create-twin-life-intro">
+              <label for="createTwinLifeIntro">生活簡介（用自己的話描述日常）</label>
+              <textarea id="createTwinLifeIntro" rows="3" maxlength="400" placeholder="例如：平日白天工作，晚上會運動與閱讀，週末喜歡安排短途旅行"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-topic-wrap hidden" id="createTwinCustomFields">
+          <label>自訂分身基本資料</label>
+          <div class="create-twin-custom-grid">
+            <select id="createTwinCustomRole">
+              <option value="">分身定位（請選擇）</option>
+              <option value="mentor">導師型（給建議、給方向）</option>
+              <option value="partner">夥伴型（一起討論、共創）</option>
+              <option value="executor">執行型（拆解任務、推進進度）</option>
+              <option value="listener">陪伴型（傾聽、整理情緒）</option>
+              <option value="other">其他</option>
+            </select>
+            <select id="createTwinCustomTone">
+              <option value="">回覆語氣（請選擇）</option>
+              <option value="concise">精簡直接</option>
+              <option value="balanced">平衡清楚</option>
+              <option value="detailed">完整詳細</option>
+              <option value="friendly">溫和鼓勵</option>
+            </select>
+            <input type="text" id="createTwinCustomDomain" maxlength="100" placeholder="主要使用情境（例如：學習規劃、工作管理）" />
+            <input type="text" id="createTwinCustomBoundaries" maxlength="120" placeholder="希望避免的內容（選填）" />
+            <input type="text" id="createTwinCustomGoal" maxlength="120" placeholder="希望分身幫你達成的目標（選填）" />
+            <input type="text" id="createTwinCustomKeywords" maxlength="120" placeholder="常用關鍵字（選填）" />
+            <div class="create-twin-custom-intro">
+              <label for="createTwinCustomIntro">自訂簡介（你希望分身怎麼幫你）</label>
+              <textarea id="createTwinCustomIntro" rows="3" maxlength="400" placeholder="例如：我希望你像我的專題助教，幫我拆解任務、安排優先順序，回覆清楚且可執行"></textarea>
+            </div>
+          </div>
+        </div>
+        <p class="auth-error hidden" id="createTwinModalError"></p>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary hidden" id="btnCreateTwinModalBack">上一步</button>
+          <button type="button" class="btn-primary hidden" id="btnCreateTwinModalNext">下一步</button>
+          <button type="submit" class="btn-primary" id="btnCreateTwinModalConfirm">建立分身</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay profile-modal-overlay" id="personProfileModal" aria-hidden="true">
+    <div class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="personProfileName">
+      <button type="button" class="profile-modal-close" id="btnPersonProfileCloseX" aria-label="關閉">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="profile-modal-hero" id="personProfileHero"></div>
+      <div class="profile-modal-body">
+        <div class="profile-modal-head">
+          <div id="personProfileAvatar" class="profile-modal-avatar"></div>
+          <div class="profile-modal-titles">
+            <h2 id="personProfileName"></h2>
+            <div id="personProfileNameEn" class="profile-name-en"></div>
+            <div class="profile-modal-meta" id="personProfileMeta"></div>
+          </div>
+        </div>
+        <div class="profile-modal-section">
+          <h3 class="profile-section-title">自我介紹</h3>
+          <div id="personProfileBio" class="profile-bio"></div>
+        </div>
+        <div class="profile-modal-section">
+          <h3 class="profile-section-title">連結</h3>
+          <div class="profile-links" id="personProfileLinks"></div>
+        </div>
+        <div class="profile-modal-actions">
+          <button type="button" class="btn-primary profile-chat-btn" id="btnPersonProfileChat">與他討論</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay profile-modal-overlay" id="userProfileModal" aria-hidden="true">
+    <div class="profile-modal user-profile-modal" role="dialog" aria-modal="true" aria-labelledby="profileViewDisplayName">
+      <button type="button" class="profile-modal-close" id="btnUserProfileCloseX" aria-label="關閉">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="profile-modal-hero" id="userProfileHero"></div>
+      <div class="profile-modal-body">
+        <div class="profile-modal-head">
+          <div
+            id="profileViewAvatar"
+            class="profile-modal-avatar profile-modal-avatar-editable"
+            role="button"
+            tabindex="0"
+            title="點擊更換頭像"
+            aria-label="更換頭像"
+          ></div>
+          <div class="profile-modal-titles">
+            <h2 id="profileViewDisplayName">使用者</h2>
+            <div id="profileViewTwinLabel" class="profile-name-en"></div>
+            <div class="profile-modal-meta" id="userProfileMeta"></div>
+          </div>
+        </div>
+        <form id="profileEditForm" class="user-profile-form">
+          <input type="file" id="profileAvatarInput" class="profile-avatar-input-hidden" accept="image/*" />
+          <div class="profile-modal-section">
+            <h3 class="profile-section-title">編輯資料</h3>
+            <div class="profile-fields">
+              <div class="profile-field">
+                <label for="profileEditDisplayName">顯示名稱</label>
+                <input type="text" id="profileEditDisplayName" maxlength="64" autocomplete="nickname" required />
+              </div>
+              <div class="profile-field profile-field-readonly">
+                <label for="profileViewUsername">使用者名稱</label>
+                <input type="text" id="profileViewUsername" readonly tabindex="-1" />
+              </div>
+              <div class="profile-field profile-field-readonly">
+                <label for="profileViewEmail">Email</label>
+                <input type="text" id="profileViewEmail" readonly tabindex="-1" />
+              </div>
+              <div class="profile-field profile-field-readonly">
+                <label for="profileViewActiveTwin">目前分身</label>
+                <input type="text" id="profileViewActiveTwin" readonly tabindex="-1" />
+              </div>
+              <div class="profile-field">
+                <label for="profileEditBio">自我介紹</label>
+                <textarea id="profileEditBio" rows="4" maxlength="2000" placeholder="簡短介紹你自己…"></textarea>
+              </div>
+            </div>
+          </div>
+          <p class="profile-save-error hidden" id="profileSaveError"></p>
+          <div class="profile-modal-actions">
+            <button type="submit" class="btn-primary profile-save-btn">儲存變更</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="stancePhaseModal">
+    <div class="modal stance-phase-modal" role="dialog" aria-modal="true" aria-labelledby="stancePhaseModalTitle">
+      <div class="modal-header">
+        <span id="stancePhaseModalTitle">立場詳情</span>
+        <button type="button" class="modal-close-btn" id="btnStancePhaseClose" aria-label="關閉">×</button>
+      </div>
+      <div class="stance-phase-modal-body" id="stancePhaseModalBody"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="mindMapQuoteModal" aria-hidden="true">
+    <div class="modal mind-map-quote-modal" role="dialog" aria-modal="true" aria-labelledby="mindMapQuoteModalTitle">
+      <div class="modal-header">
+        <span id="mindMapQuoteModalTitle">發言原話</span>
+        <button type="button" class="modal-close-btn" id="btnMindMapQuoteClose" aria-label="關閉">×</button>
+      </div>
+      <div class="mind-map-quote-modal-body" id="mindMapQuoteModalBody"></div>
+    </div>
+  </div>
+
+  <script src="/static/js/config.js?v=split99"></script>
+  <script src="/static/js/utils.js?v=split62"></script>
+  <script src="/static/js/sidebar.js?v=split87"></script>
+  <script src="/static/js/notify.js?v=split60"></script>
+  <script src="/static/js/profile.js?v=split98"></script>
+  <script src="/static/js/discover.js?v=split74"></script>
+  <script src="/static/js/session.js?v=split87"></script>
+  <script src="/static/js/chat.js?v=split70"></script>
+  <script src="/static/js/insights.js?v=split67"></script>
+  <script src="/static/js/twin.js?v=split87"></script>
+  <script src="/static/js/init.js?v=split97"></script>
+</body>
+</html>

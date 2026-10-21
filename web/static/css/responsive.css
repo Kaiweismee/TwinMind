@@ -1,0 +1,19 @@
+/* ========== Responsive ========== */
+@media (max-width: 900px) {
+  .discover-header {
+    flex-wrap: wrap;
+    padding-right: 56px;
+  }
+  .hero-search {
+    order: 3;
+    flex: 1 1 100%;
+    max-width: none;
+    margin: 0;
+  }
+  .welcome-block {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .char-card { flex: 0 0 280px; }
+}
+
