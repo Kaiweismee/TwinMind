@@ -13,27 +13,14 @@ import json
 import logging
 import os
 import re
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
 from typing import Any
 
 from data.person_profiles import PERSON_PROFILES, category_for_slug
 
-_ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
 
-from topic_fit import (
-    TIER_ORDER,
-    debate_rounds_from_fit,
-    enrich_person_with_fit,
-    fit_tier,
-    fit_tier_label,
-    rank_persons_keyword_only as rank_persons_keyword,
-    score_person_topic_fit,
-)
+from web.recommendations.topic_fit import TIER_ORDER, debate_rounds_from_fit, enrich_person_with_fit, fit_tier, fit_tier_label, rank_persons_keyword_only as rank_persons_keyword, score_person_topic_fit
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +111,7 @@ def prefetch_rag_excerpts(topic: str, slugs: list[str]) -> dict[str, str]:
     out: dict[str, str] = {s: "" for s in clean}
     if _LLM_USE_VECTOR:
         try:
-            from rag.search import batch_search_chunks, format_context
+            from web.core.rag_backend import batch_search_chunks, format_context
 
             hits_map = batch_search_chunks(topic, clean, top_k=_RAG_TOP_K)
             for slug, hits in hits_map.items():
@@ -152,7 +139,7 @@ def _rag_excerpts(topic: str, slug: str, excerpt_map: dict[str, str] | None = No
 
 def _db_excerpts(topic: str, slug: str, limit: int = 4) -> str:
     """向量不可用時，用主題詞在 chunks 內容做文字匹配取樣。"""
-    from rag.db import connect_dict
+    from web.core.rag_backend import connect_dict
 
     terms = [t for t in re.split(r"[\s,，、]+", (topic or "").strip()) if len(t) >= 2][:6]
     if not terms:
@@ -382,7 +369,7 @@ def _hybrid_scores_for_persons(
     topic: str, persons: list[dict[str, Any]]
 ) -> dict[str, dict[str, Any]]:
     try:
-        from topic_fit_semantic import score_persons_hybrid
+        from web.recommendations.topic_fit_semantic import score_persons_hybrid
 
         return score_persons_hybrid(topic, persons)
     except Exception as exc:
@@ -418,7 +405,7 @@ def _llm_prefilter(
     cap = max(limit, _LLM_CANDIDATES, len(persons))
     if _LLM_PREFILTER in ("semantic", "hybrid", "vector", "rag"):
         try:
-            from topic_fit_semantic import rank_persons_for_topic_semantic
+            from web.recommendations.topic_fit_semantic import rank_persons_for_topic_semantic
 
             return rank_persons_for_topic_semantic(topic, persons, limit=cap)
         except Exception as exc:

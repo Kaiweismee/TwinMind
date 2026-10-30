@@ -10,25 +10,11 @@ from __future__ import annotations
 
 import logging
 import os
-import sys
 import time
-from pathlib import Path
 from typing import Any
 
-_ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
-if str(_ROOT / "rag") not in sys.path:
-    sys.path.insert(0, str(_ROOT / "rag"))
 
-from topic_fit import (
-    TIER_ORDER,
-    debate_rounds_from_fit,
-    enrich_person_with_fit,
-    fit_tier,
-    fit_tier_label,
-    score_person_topic_fit,
-)
+from web.recommendations.topic_fit import TIER_ORDER, debate_rounds_from_fit, enrich_person_with_fit, fit_tier, fit_tier_label, score_person_topic_fit
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +28,7 @@ _MIN_COMBINED_SIM = float(os.getenv("TOPIC_FIT_MIN_SIM", "0.18"))
 
 def corpus_ranking_available() -> bool:
     try:
-        from search import corpus_similarity_available
+        from web.core.rag_backend import corpus_similarity_available
 
         return corpus_similarity_available()
     except Exception as exc:
@@ -77,7 +63,7 @@ def _cache_set(topic: str, data: dict[str, dict[str, Any]]) -> None:
 
 
 def _fetch_corpus_ranks(topic: str) -> list[dict[str, Any]]:
-    from search import embed_query_cached, rank_persons_by_topic
+    from web.core.rag_backend import embed_query_cached, rank_persons_by_topic
 
     query_vec = embed_query_cached(topic)
     return rank_persons_by_topic(

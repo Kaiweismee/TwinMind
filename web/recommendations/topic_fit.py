@@ -165,8 +165,8 @@ def _topic_fit_backend() -> str:
     mode = (os.getenv("TOPIC_FIT_BACKEND") or "auto").strip().lower()
     if mode == "auto":
         try:
-            from topic_fit_semantic import corpus_ranking_available
-            from topic_fit_llm import openai_configured
+            from web.recommendations.topic_fit_semantic import corpus_ranking_available
+            from web.recommendations.topic_fit_llm import openai_configured
 
             if (
                 os.getenv("TOPIC_FIT_LLM_RERANK", "").strip() in ("1", "true", "yes")
@@ -215,7 +215,7 @@ def rank_persons_for_topic(
     backend = _topic_fit_backend()
     if backend == "llm":
         try:
-            from topic_fit_llm import rank_persons_for_topic_llm
+            from web.recommendations.topic_fit_llm import rank_persons_for_topic_llm
 
             return rank_persons_for_topic_llm(topic, persons, limit=limit)
         except Exception as exc:
@@ -223,7 +223,7 @@ def rank_persons_for_topic(
             backend = "hybrid"
     if backend in ("hybrid", "semantic"):
         try:
-            from topic_fit_semantic import rank_persons_for_topic_semantic
+            from web.recommendations.topic_fit_semantic import rank_persons_for_topic_semantic
 
             return rank_persons_for_topic_semantic(topic, persons, limit=limit)
         except Exception as exc:
@@ -241,7 +241,7 @@ def build_member_fit_plan(
     backend = _topic_fit_backend()
     if backend == "llm":
         try:
-            from topic_fit_llm import build_member_fit_plan_llm
+            from web.recommendations.topic_fit_llm import build_member_fit_plan_llm
 
             return build_member_fit_plan_llm(topic, slugs, persons_by_slug)
         except Exception as exc:
@@ -249,7 +249,7 @@ def build_member_fit_plan(
             backend = "hybrid"
     if backend in ("hybrid", "semantic"):
         try:
-            from topic_fit_semantic import build_member_fit_plan_semantic
+            from web.recommendations.topic_fit_semantic import build_member_fit_plan_semantic
 
             return build_member_fit_plan_semantic(topic, slugs, persons_by_slug)
         except Exception as exc:

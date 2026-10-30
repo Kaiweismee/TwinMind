@@ -10,8 +10,8 @@ from typing import Any
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from config import DB_CONFIG  # type: ignore
-from session_auth import hash_password, new_guest_token, verify_password
+from web.core.rag_backend import DB_CONFIG
+from web.core.session_auth import hash_password, new_guest_token, verify_password
 
 AUTH_SESSION_DAYS = int(os.getenv("AUTH_SESSION_DAYS", "30"))
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_]{3,32}$")

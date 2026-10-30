@@ -3,22 +3,17 @@
 from __future__ import annotations
 
 import json
-import sys
-from pathlib import Path
 from typing import Any
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "rag"))
-sys.path.insert(0, str(ROOT / "crawl"))
 
-from db import connect  # type: ignore
-from db_utils import content_hash, split_chunks  # type: ignore
-from embedder import embed_texts  # type: ignore
-from search import format_context, search_chunks  # type: ignore
-from store import MODE_JSON, MODE_PGVECTOR, detect_storage_mode  # type: ignore
+from web.core.rag_backend import connect
+from crawl.db_utils import content_hash, split_chunks
+from web.core.rag_backend import embed_texts
+from web.core.rag_backend import format_context, search_chunks
+from web.core.rag_backend import MODE_JSON, MODE_PGVECTOR, detect_storage_mode
 
 
 def user_person_slug(user_id: int) -> str:
@@ -230,7 +225,7 @@ def backfill_user_knowledge(
     twin_id: int | None = None,
 ) -> int:
     """將既有分身對話補進知識庫。回傳新增的 document 數。"""
-    import twin_chat  # noqa: WPS433 — 避免與 twin_chat 循環匯入於模組頂層
+    from web.conversations import twin_chat
 
     ensure_user_person(user_id, display_name=display_name)
     count = 0
@@ -238,7 +233,7 @@ def backfill_user_knowledge(
     if twin_id:
         twin_ids = [twin_id]
     else:
-        import user_store  # noqa: WPS433
+        from web.repositories import user_store
 
         for t in user_store.list_user_twins(user_id):
             twin_ids.append(int(t["id"]))

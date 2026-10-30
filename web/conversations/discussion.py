@@ -10,9 +10,9 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from search import format_context, search_chunks  # type: ignore
+from web.core.rag_backend import format_context, search_chunks
 
-import chat_store
+from web.repositories import chat_store
 
 CITE_RE = re.compile(
     r"([^[\]【】]+?)(?:\[(?:(\d+)|推論)\]|【(?:(\d+)|推論)】)"
@@ -181,7 +181,7 @@ def _append_session_context(
 ) -> tuple[str, list[int], list[dict]]:
     if not user_id or not session_id:
         return context, chunk_ids, sources
-    import user_rag  # noqa: WPS433
+    from web.knowledge import user_rag
 
     sess_ctx, sess_ids, sess_src = user_rag.search_session_context(
         user_id, session_id, query, top_k=min(6, top_k)
@@ -203,7 +203,6 @@ def _llm(client: Any, model: str, system: str, user: str, temperature: float = 0
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        temperature=temperature,
     )
     return (resp.choices[0].message.content or "").strip()
 
@@ -225,7 +224,7 @@ def _member_debate_rounds(m: dict[str, Any]) -> int:
     dr = m.get("debate_rounds")
     if dr is not None:
         return max(0, min(6, int(dr)))
-    from topic_fit import debate_rounds_from_fit
+    from web.recommendations.topic_fit import debate_rounds_from_fit
 
     return debate_rounds_from_fit(int(m.get("topic_fit_score") or 50))
 
@@ -445,7 +444,7 @@ def _reply_user_twin(
         rag_q = f"{topic} {discussion_brief} {history_text[-500:]}"
         user_rag_context, chunk_ids, sources = _user_rag_context(user_id, rag_q, top_k)
         if session_id:
-            import user_rag  # noqa: WPS433
+            from web.knowledge import user_rag
 
             sess_ctx, sess_ids, sess_src = user_rag.search_session_context(
                 user_id, session_id, rag_q, top_k=min(6, top_k)
@@ -487,7 +486,7 @@ def _reply_user_twin(
 
 
 def _user_rag_context(user_id: int, query: str, top_k: int) -> tuple[str, list[int], list[dict[str, Any]]]:
-    import user_rag  # noqa: WPS433
+    from web.knowledge import user_rag
 
     return user_rag.search_user_context(user_id, query, top_k=top_k)
 

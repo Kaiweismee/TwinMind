@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-import twin_chat
-import user_rag
+from web.conversations import twin_chat
+from web.knowledge import user_rag
 
 MAX_SESSION_FILES = 6
 MAX_BRIEF_CHARS = 16000

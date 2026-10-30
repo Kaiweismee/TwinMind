@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 
 import psycopg2
 from psycopg2.extras import Json
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "rag"))
 
-from config import DB_CONFIG  # type: ignore  # rag/config via sys.path
+from web.core.rag_backend import DB_CONFIG
 from data.person_profiles import PERSON_PROFILES, category_for_slug
 
 

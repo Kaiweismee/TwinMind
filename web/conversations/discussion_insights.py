@@ -1332,7 +1332,7 @@ def _hydrate_llm_at_from_db(session_id: int) -> None:
     if session_id in _insights_llm_at:
         return
     try:
-        from chat_store import load_session_insights
+        from web.repositories.chat_store import load_session_insights
 
         row = load_session_insights(session_id)
         if row and row.get("llm_message_count"):
@@ -1346,7 +1346,7 @@ def get_cached_insights(session_id: int, message_count: int) -> dict[str, Any] |
     if key in _insights_cache:
         return _insights_cache[key]
     try:
-        from chat_store import load_session_insights
+        from web.repositories.chat_store import load_session_insights
 
         row = load_session_insights(session_id)
         if not row:
@@ -1369,7 +1369,7 @@ def get_cached_insights(session_id: int, message_count: int) -> dict[str, Any] |
 def get_stored_insights_snapshot(session_id: int) -> dict[str, Any] | None:
     """最近一次寫入 DB 的圖譜（訊息數可與現在不同）。"""
     try:
-        from chat_store import load_session_insights
+        from web.repositories.chat_store import load_session_insights
 
         row = load_session_insights(session_id)
         if not row or not isinstance(row.get("insights"), dict):
@@ -1391,7 +1391,7 @@ def set_cached_insights(session_id: int, message_count: int, data: dict[str, Any
         _insights_cache.pop(oldest, None)
     llm_n = _insights_llm_at.get(session_id, 0)
     try:
-        from chat_store import save_session_insights
+        from web.repositories.chat_store import save_session_insights
 
         save_session_insights(
             session_id,

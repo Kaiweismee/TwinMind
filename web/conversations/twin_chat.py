@@ -13,9 +13,9 @@ from typing import Any
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
-from config import DB_CONFIG  # type: ignore
+from web.core.rag_backend import DB_CONFIG
 
-ROOT = Path(__file__).resolve().parent.parent
+from web.core.settings import ROOT
 UPLOAD_ROOT = ROOT / "data" / "twin_uploads"
 MAX_FILE_BYTES = 8 * 1024 * 1024
 MAX_HISTORY = 40
@@ -83,7 +83,7 @@ def save_upload(user_id: int, filename: str, data: bytes) -> dict[str, Any]:
     kind = "image" if ext in IMAGE_EXTENSIONS or mime.startswith("image/") else "file"
     preview = ""
     if ext in TEXT_EXTENSIONS or ext in DOCUMENT_EXTENSIONS:
-        from file_extract import preview_text  # noqa: WPS433
+        from web.knowledge.file_extract import preview_text
 
         preview = preview_text(safe, data)
 
@@ -229,7 +229,7 @@ def generate_reply(
     user_id = profile.get("id")
     if user_id:
         try:
-            import user_rag  # noqa: WPS433
+            from web.knowledge import user_rag
 
             rag_q = (user_text or "").strip() or _attachment_context(attachments)
             if rag_q:

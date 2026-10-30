@@ -8,8 +8,8 @@ from typing import Any
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
-from config import DB_CONFIG  # type: ignore  # rag/config via sys.path
-from session_auth import hash_password, new_join_code, verify_password
+from web.core.rag_backend import DB_CONFIG
+from web.core.session_auth import hash_password, new_join_code, verify_password
 
 USER_DISPLAY_NAME = os.getenv("APP_USER_NAME", "kaiweisme")
 USER_DISPLAY_BIO = os.getenv("APP_USER_BIO", "數位分身畢專 · 本機開發")
@@ -256,7 +256,7 @@ def ensure_chat_schema() -> None:
                 """
             )
         conn.commit()
-        from person_profile_seed import seed_person_profiles
+        from web.knowledge.person_profile_seed import seed_person_profiles
 
         seed_person_profiles()
     finally:
@@ -312,7 +312,7 @@ def _fetch_members(cur, session_id: int) -> list[dict[str, Any]]:
     )
     rows = [dict(r) for r in cur.fetchall()]
     try:
-        from topic_fit import debate_rounds_from_fit
+        from web.recommendations.topic_fit import debate_rounds_from_fit
 
         for r in rows:
             sc = r.get("topic_fit_score")
@@ -395,7 +395,7 @@ def create_session(
             row["allow_guest_join"] = bool(row.get("allow_guest_join", allow_join))
             session_id = row["id"]
 
-            from topic_fit import build_member_fit_plan
+            from web.recommendations.topic_fit import build_member_fit_plan
 
             feed = list_persons_feed()
             by_slug = {p["slug"]: p for p in feed}
@@ -1088,7 +1088,7 @@ def get_session(session_id: int) -> dict[str, Any] | None:
             owner_id = session.get("owner_user_id")
             if owner_id is not None:
                 try:
-                    import user_store  # noqa: WPS433
+                    from web.repositories import user_store
 
                     owner_profile = user_store.get_user_profile_by_id(int(owner_id))
                     owner_label = (
@@ -1193,7 +1193,7 @@ def list_messages(session_id: int) -> list[dict[str, Any]]:
                     sources = _sources_from_chunk_ids(cur, list(chunk_ids))
                 if sources and not segments and (msg.get("content") or "").strip():
                     try:
-                        from discussion import parse_cited_reply
+                        from web.conversations.discussion import parse_cited_reply
 
                         display, segments = parse_cited_reply(
                             msg["content"], sources

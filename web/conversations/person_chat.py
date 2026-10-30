@@ -7,9 +7,9 @@ from typing import Any
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
-from config import DB_CONFIG  # type: ignore
-from search import format_context, search_chunks  # type: ignore
-import twin_chat  # noqa: E402
+from web.core.rag_backend import DB_CONFIG
+from web.core.rag_backend import format_context, search_chunks
+from web.conversations import twin_chat
 
 MAX_HISTORY = 40
 
