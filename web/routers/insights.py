@@ -15,6 +15,7 @@ from web.services.ai import _discussion_client
 
 
 router = APIRouter()
+MIND_MAP_FORMAT_VERSION = 2
 
 
 @router.get("/api/sessions/{session_id}/insights")
@@ -44,17 +45,22 @@ def api_session_insights(
     if max_messages is not None:
         messages = messages[:max_messages]
     msg_count = len(chat_store.list_messages(session_id))
+    needs_mind_map_refresh = False
     if not refresh and not live:
         cached = discussion_insights.get_cached_insights(session_id, msg_count)
         if cached:
-            return {
-                "insights": cached,
-                "message_count": msg_count,
-                "cached": True,
-                "persisted": True,
-            }
+            if cached.get("mind_map_format_version", 0) >= MIND_MAP_FORMAT_VERSION:
+                return {
+                    "insights": cached,
+                    "message_count": msg_count,
+                    "cached": True,
+                    "persisted": True,
+                }
+            needs_mind_map_refresh = True
         snap = discussion_insights.get_stored_insights_snapshot(session_id)
-        if snap and snap["message_count"] < msg_count:
+        if snap and snap["message_count"] < msg_count and snap["insights"].get(
+            "mind_map_format_version", 0
+        ) >= MIND_MAP_FORMAT_VERSION:
             stale = dict(snap["insights"])
             stale["stale"] = True
             stale["stored_message_count"] = snap["message_count"]
@@ -65,6 +71,21 @@ def api_session_insights(
                 "persisted": True,
                 "stale": True,
             }
+        elif snap and snap["insights"].get(
+            "mind_map_format_version", 0
+        ) < MIND_MAP_FORMAT_VERSION:
+            needs_mind_map_refresh = True
+    elif live and not refresh:
+        # live=1 每輪都會略過一般快取檢查；舊版圖譜也要在這條路徑自動重做一次。
+        cached = discussion_insights.get_cached_insights(session_id, msg_count)
+        snap = discussion_insights.get_stored_insights_snapshot(session_id)
+        stored = cached or (snap.get("insights") if snap else None)
+        if stored and stored.get("mind_map_format_version", 0) < MIND_MAP_FORMAT_VERSION:
+            attempted_at = int(stored.get("mind_map_refresh_attempted_count") or 0)
+            needs_mind_map_refresh = (
+                attempted_at <= 0
+                or msg_count - attempted_at >= discussion_insights.INSIGHTS_LLM_EVERY_N
+            )
 
     topic = session.get("topic") or session.get("title") or "討論"
     members = session.get("members") or []
@@ -74,6 +95,7 @@ def api_session_insights(
         client, model = _discussion_client()
     except HTTPException:
         client = None
+    ai_available = client is not None
 
     try:
         insights = discussion_insights.build_session_insights(
@@ -84,7 +106,7 @@ def api_session_insights(
             message_count=msg_count,
             client=client,
             model=model,
-            force=refresh,
+            force=refresh or needs_mind_map_refresh,
             live_only=live and not refresh,
         )
     except Exception as exc:
@@ -102,6 +124,13 @@ def api_session_insights(
         insights["update_label"] = "即時更新（分析暫時失敗，已改用規則版）"
 
     insights["message_count"] = msg_count
+    insights["ai_available"] = ai_available
+    if insights.get("mind_map_format_version", 0) < MIND_MAP_FORMAT_VERSION:
+        insights["mind_map_format_version"] = (
+            MIND_MAP_FORMAT_VERSION if insights.get("source") == "llm" else 1
+        )
+    if needs_mind_map_refresh and insights.get("mind_map_format_version", 0) < MIND_MAP_FORMAT_VERSION:
+        insights["mind_map_refresh_attempted_count"] = msg_count
     discussion_insights.set_cached_insights(session_id, msg_count, insights)
     return {
         "insights": insights,

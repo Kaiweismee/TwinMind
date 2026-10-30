@@ -14,3 +14,5 @@
 | `modal.css` | 彈出視窗和遮罩。 |
 | `insights.css` | 心智圖與立場分析。 |
 | `responsive.css` | 小螢幕與窄視窗調整。 |
+
+| `mindmap.css` | 心智圖的紙張底色、彩色標籤、觀點卡片與閱讀視窗。 |

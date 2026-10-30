@@ -45,6 +45,8 @@ async function openSession(id) {
   }
   currentSessionId = id;
   currentSession = data.session;
+  clearInsightsPanel();
+  lastInsightsMsgCount = (data.messages || []).length;
   showChat();
   clearSourcesDrawer();
 

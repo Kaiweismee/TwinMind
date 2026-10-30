@@ -3,15 +3,41 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from typing import Any
 
-INSIGHTS_LLM_EVERY_N = max(1, int(os.getenv("INSIGHTS_LLM_EVERY_N", "3")))
+INSIGHTS_LLM_EVERY_N = max(1, int(os.getenv("INSIGHTS_LLM_EVERY_N", "1")))
 
 _NON_CELEB_ROLES = frozenset(
     {"user", "user_twin", "conclusion", "system", "moderator"}
 )
+_log = logging.getLogger(__name__)
+
+
+def _mind_map_analysis_status(error: Any) -> str:
+    if isinstance(error, dict):
+        param = error.get("param")
+        code = error.get("code")
+        if param:
+            return f"AI 請求被拒絕（{param}）"
+        if code:
+            return f"AI 請求失敗（{code}）"
+        return f"AI 請求失敗（{error.get('type') or '未知錯誤'}）"
+    if error == "invalid_json":
+        return "AI 回覆格式錯誤"
+    if error == "AuthenticationError":
+        return "OpenAI API 金鑰驗證失敗"
+    if error == "RateLimitError":
+        return "OpenAI API 額度或頻率受限"
+    if error == "APIConnectionError":
+        return "無法連線 OpenAI API"
+    if error == "BadRequestError":
+        return "AI 請求格式或模型設定錯誤"
+    if error == "APITimeoutError":
+        return "OpenAI API 回應逾時"
+    return "AI 摘要服務發生錯誤"
 
 
 def _message_person_slug(m: dict[str, Any]) -> str:
@@ -376,68 +402,6 @@ def _theme_keywords(label: str, topic: str = "") -> list[str]:
     return []
 
 
-def _content_for_slug_theme(
-    lines: list[dict[str, str]],
-    slug: str,
-    theme_label: str,
-    topic: str,
-) -> str:
-    candidates = [l for l in lines if l.get("person_slug") == slug]
-    if not candidates:
-        return ""
-    if theme_label in ("討論重點", "討論結論", ""):
-        return candidates[-1]["content"]
-    keywords = _theme_keywords(theme_label, topic)
-    best = candidates[-1]
-    best_score = -1.0
-    for line in candidates:
-        sc = float(_theme_score_for_text(line["content"], keywords))
-        sc += _sentence_substance_score(line["content"], topic) * 0.15
-        if sc > best_score:
-            best_score = sc
-            best = line
-    return best["content"]
-
-
-def _polish_mind_map_quotes(
-    mind: dict[str, Any],
-    lines: list[dict[str, str]],
-    topic: str,
-) -> None:
-    """微調葉節點摘錄長度；保留各子議題已分配的句子，勿改回整段發言。"""
-    title = topic or mind.get("title") or ""
-
-    for theme_node in mind.get("children") or []:
-        if not isinstance(theme_node, dict):
-            continue
-        for leaf in theme_node.get("children") or []:
-            if not isinstance(leaf, dict):
-                continue
-            slug = leaf.get("person_slug") or ""
-            if not slug:
-                continue
-            base = (
-                leaf.get("quote_full")
-                or leaf.get("quote")
-                or leaf.get("label")
-                or ""
-            ).strip()
-            if len(base) < 12:
-                theme_label = str(
-                    leaf.get("theme_label") or theme_node.get("label") or ""
-                )
-                content = _content_for_slug_theme(lines, slug, theme_label, title)
-                base = _message_highlight(content, 110, title) or base
-            if not base:
-                continue
-            hl_full = base if len(base) <= 110 else _message_highlight(base, 110, title)
-            hl_short = _compact_point(hl_full or base, topic=title, max_len=24)
-            if hl_full or hl_short:
-                leaf["quote_full"] = hl_full or hl_short
-                leaf["quote"] = hl_short or hl_full
-                leaf["label"] = hl_short or hl_full
-
-
 def _build_speech_highlights(
     lines: list[dict[str, str]],
     *,
@@ -776,8 +740,8 @@ def _build_mind_map_children(
         if leaves:
             children.append({"label": theme_label, "children": leaves})
 
-    # 太少時放寬門檻補足內容，優先補齊到至少 3 個節點
-    if len(children) < 3:
+    # 只放寬門檻尋找有實際內容的新議題，不補固定數量的分類。
+    if children:
         relaxed = _assign_mind_map_leaves(
             topic,
             lines,
@@ -796,46 +760,8 @@ def _build_mind_map_children(
                 leaves.append(leaf)
             if leaves:
                 children.append({"label": theme_label, "children": leaves})
-            if len(children) >= 3:
-                break
-
-    # 仍不足 3 個節點時，補上「待補充」分支避免畫面過少
-    if len(children) < 3:
-        existing_labels = {c.get("label") for c in children}
-        for theme_label in themes:
-            if theme_label in existing_labels:
-                continue
-            children.append(
-                {
-                    "label": theme_label,
-                    "children": [
-                        {
-                            "label": "此面向暫無足夠觀點，待更多討論",
-                            "quote": "此面向暫無足夠觀點，待更多討論",
-                            "quote_full": "此面向暫無足夠觀點，待更多討論",
-                            "speaker": "系統",
-                            "person_slug": "",
-                        }
-                    ],
-                }
-            )
-            if len(children) >= 3:
-                break
     if not children:
-        return [
-            {
-                "label": "討論重點",
-                "children": [
-                    {
-                        "label": "目前尚無與主題高度相關的名人觀點",
-                        "quote": "目前尚無與主題高度相關的名人觀點",
-                        "quote_full": "目前尚無與主題高度相關的名人觀點",
-                        "speaker": "系統",
-                        "person_slug": "",
-                    }
-                ],
-            }
-        ]
+        return []
     return children
 
 
@@ -1023,9 +949,6 @@ def _fallback_insights(
 
     children = _build_mind_map_children(topic or "討論主題", lines, members)
 
-    if not children:
-        children = [{"label": "等待名人發言", "children": [{"label": "討論開始後會更新", "quote": ""}]}]
-
     phases_seen: list[str] = []
     for line in lines:
         p = line.get("phase") or "discussion"
@@ -1162,13 +1085,7 @@ def _normalize_insights(
     if not mind.get("title"):
         mind["title"] = topic or "討論主題"
     if not mind.get("children"):
-        mind["children"] = [{"label": "尚無重點", "children": []}]
-    elif lines:
-        rebuilt = _build_mind_map_children(
-            topic or mind.get("title") or "討論主題", lines, members
-        )
-        if rebuilt:
-            mind["children"] = rebuilt
+        mind["children"] = []
 
     chart = raw.get("stance_chart") or {}
     if not chart.get("topic"):
@@ -1195,16 +1112,10 @@ def _normalize_insights(
     chart["overlap_threshold"] = _cluster_overlap_threshold()
 
     _enrich_node_speakers(mind, lookup)
-    for i, child in enumerate(mind.get("children") or []):
+    for child in mind.get("children") or []:
         if isinstance(child, dict):
-            child["label"] = _canonical_mind_map_branch_label(
-                child.get("label"),
-                i,
-                topic,
-            )
+            child["label"] = str(child.get("label") or "討論重點").strip()
             _enrich_node_speakers(child, lookup)
-    if lines:
-        _polish_mind_map_quotes(mind, lines, topic or mind.get("title") or "")
 
     return {
         "mind_map": mind,
@@ -1257,11 +1168,11 @@ def generate_insights(
     "title": "與討論主題相同的一句話",
     "children": [
       {{
-        "label": "討論產出的子議題或重點（例如：就業影響、技術限制）",
+        "label": "依本場對話歸納出的實際議題名稱",
         "children": [
           {{
-            "label": "該名人對此子議題的一句重點",
-            "quote": "同上，20-40字",
+            "label": "該名人對此議題整理後的核心重點",
+            "quote": "以 18-40 字統整主張與理由／影響",
             "speaker": "中文名",
             "person_slug": "slug"
           }}
@@ -1288,13 +1199,17 @@ def generate_insights(
 }}
 
 規則：
-- mind_map 結構：中心 title=討論主題 → 第二層=2-4 個「討論子議題／共識爭點／結論重點」→ 第三層=各名人對該子議題的一句看法
+- mind_map 結構：中心 title=討論主題 → 第二層=依對話內容自行歸納的議題 → 第三層=各名人在該議題下整理後的重點
+- 議題數量由內容決定；輸出所有清楚且彼此不同的議題，通常 2-8 個，內容尚少時可少於 2 個；不可湊固定數量，不可加入沒有實際觀點的分類
+- 議題名稱貼合本場討論，允許使用全新的分類；不要把近義議題拆開湊數
 - 禁止用「開場／辯論／總結」或流程階段當第二層；禁止把名人姓名當第二層
-- 葉節點必須含 speaker、person_slug、quote（或 label），20-40 字，不要只寫人名
+- 每個葉節點含 speaker、person_slug、quote（或 label）；以 18-40 字統整名人在此議題下的主張與理由／影響
+- quote 必須是摘要而非逐字摘錄：不要照抄原句、不要使用引號或第一人稱；忠於發言，不加入對話未提及的事實
+- 只收錄確實談及該議題的名人；不可在多個議題重複相同重點
 - quote／highlights 必須是實質論點（立場、理由、影響、建議），禁止「哈囉大家好」「很高興參與」等寒暄開場
 - quote / highlights 不要以「我同意某某」「謝謝某某」開頭，請直接寫該名人的自身立場與理由
 - quote / highlights 僅保留「主張 + 理由/影響」句型，避免只有回應語氣或純社交用語
-- 從每位名人的發言中擷取最有資訊量的一句，不要只取第一句
+- 跨每位名人的相關發言統整成一個清楚重點，不要只取第一句或最長的一句
 - stance_chart 至少 2 個 step，scores 的 key 必須用 person_slug
 - 分數 0=最保守，100=最積極；若立場相近，分數應接近（前端會重疊頭像）
 """
@@ -1306,21 +1221,36 @@ def generate_insights(
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            temperature=0.3,
         )
         text = (resp.choices[0].message.content or "").strip()
         parsed = _parse_json_block(text)
         if not parsed:
+            _log.warning("Mind-map analysis returned invalid JSON")
             result = _fallback_insights(topic, members, lines)
             result["ready"] = True
+            result["mind_map_analysis_error"] = "invalid_json"
             return _finalize_insights(result, messages, members)
         result = _normalize_insights(parsed, topic, members, lines=lines)
         result["ready"] = True
         result["source"] = "llm"
         return _finalize_insights(result, messages, members)
-    except Exception:
+    except Exception as exc:
+        error_type = type(exc).__name__
+        error_param = getattr(exc, "param", None)
+        error_code = getattr(exc, "code", None)
+        _log.warning(
+            "Mind-map analysis request failed: type=%s param=%s code=%s",
+            error_type,
+            error_param if isinstance(error_param, str) else "",
+            error_code if isinstance(error_code, str) else "",
+        )
         result = _fallback_insights(topic, members, lines)
         result["ready"] = True
+        result["mind_map_analysis_error"] = {
+            "type": error_type,
+            "param": error_param if isinstance(error_param, str) else None,
+            "code": error_code if isinstance(error_code, str) else None,
+        }
         return _finalize_insights(result, messages, members)
 
 
@@ -1447,16 +1377,50 @@ def build_session_insights(
 ) -> dict[str, Any]:
     """
     邊討論邊更新：每則發言用輕量規則即時畫圖；每 N 則或強制刷新時才呼叫 OpenAI。
-    live_only=True：略過快取與 LLM，依目前對話重畫心智圖（每講一句觸發）。
+    live_only=True：平時使用上一版 AI 摘要；累積足夠新發言後再自動重做分類與摘要。
     """
     if live_only:
         lines = _discussion_lines(messages)
+        mind_map_analysis_error = None
+        if client and len(lines) >= 2 and should_use_llm_for_insights(
+            session_id, message_count, force=force
+        ):
+            result = generate_insights(
+                topic=topic,
+                members=members,
+                messages=messages,
+                client=client,
+                model=model,
+            )
+            if result.get("source") == "llm":
+                mark_llm_insights(session_id, message_count)
+                result["ready"] = True
+                result["update_mode"] = "ai"
+                result["update_label"] = "AI 已統整討論重點"
+                result["mind_map_format_version"] = 2
+                return _finalize_insights(result, messages, members)
+            mark_llm_insights(session_id, message_count)
+            mind_map_analysis_error = result.get("mind_map_analysis_error") or "analysis_failed"
+
         result = _fallback_insights(topic, members, lines)
+        if mind_map_analysis_error:
+            result["mind_map_analysis_error"] = mind_map_analysis_error
+        if client:
+            # 等候下一次 AI 統整時保留上版摘要，不把即時摘句誤當成心智圖重點。
+            previous = get_last_llm_insights(session_id)
+            previous_map = previous.get("mind_map") if isinstance(previous, dict) else None
+            if previous and previous.get("mind_map_format_version", 0) >= 2:
+                result["mind_map"] = previous_map or {"title": topic or "討論主題", "children": []}
+                result["mind_map_format_version"] = 2
+            else:
+                result["mind_map"] = {"title": topic or "討論主題", "children": []}
         result["ready"] = len(lines) >= 1
         result["update_mode"] = "live"
         n = len(lines)
         result["update_label"] = (
-            f"即時更新 · 已含 {n} 則發言" if n else "即時更新圖譜"
+            f"{_mind_map_analysis_status(mind_map_analysis_error)} · 點 ↻ 重試"
+            if mind_map_analysis_error
+            else f"等待 AI 統整 · 已含 {n} 則發言" if n else "等待討論開始"
         )
         speech_hl = _build_speech_highlights(lines, topic=topic or "")
         result["highlights"] = speech_hl or result.get("highlights") or []
@@ -1474,8 +1438,16 @@ def build_session_insights(
             client=client,
             model=model,
         )
-        result["update_mode"] = "ai"
-        result["update_label"] = "AI 深度分析"
+        ai_summary_ready = result.get("source") == "llm"
+        result["update_mode"] = "ai" if ai_summary_ready else "live"
+        result["update_label"] = (
+            "AI 已統整討論重點"
+            if ai_summary_ready
+            else f"{_mind_map_analysis_status(result['mind_map_analysis_error'])} · 點 ↻ 重試"
+            if result.get("mind_map_analysis_error")
+            else "等待 AI 重點整理"
+        )
+        result["mind_map_format_version"] = 2 if ai_summary_ready else 1
         mark_llm_insights(session_id, message_count)
         return result
 

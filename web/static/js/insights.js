@@ -7,91 +7,6 @@ let insightsOpen = false;
 let insightsFetchTimer = null;
 let insightsInFlight = false;
 let lastInsightsMsgCount = 0;
-const MIND_MAP_HISTORY_LIMIT = 90;
-const mindMapHistoryBySession = new Map();
-const mindMapLatestBySession = new Map();
-const mindMapPreviewIndexBySession = new Map();
-
-function cloneJsonSafe(value) {
-  if (typeof structuredClone === "function") return structuredClone(value);
-  return JSON.parse(JSON.stringify(value));
-}
-
-function hasMindMapChildren(mind) {
-  return !!(mind && Array.isArray(mind.children) && mind.children.length);
-}
-
-function getMindMapHistory(sessionId) {
-  if (!sessionId) return [];
-  if (!mindMapHistoryBySession.has(sessionId)) {
-    mindMapHistoryBySession.set(sessionId, []);
-  }
-  return mindMapHistoryBySession.get(sessionId);
-}
-
-function setMindMapPreviewIndex(sessionId, idx) {
-  if (!sessionId) return;
-  if (idx == null || idx < 0) {
-    mindMapPreviewIndexBySession.delete(sessionId);
-    return;
-  }
-  mindMapPreviewIndexBySession.set(sessionId, idx);
-}
-
-function getMindMapPreviewIndex(sessionId) {
-  if (!sessionId) return null;
-  const idx = mindMapPreviewIndexBySession.get(sessionId);
-  return Number.isInteger(idx) ? idx : null;
-}
-
-function mindMapLeafCount(mind) {
-  const branches = Array.isArray(mind?.children) ? mind.children : [];
-  let leaves = 0;
-  for (const b of branches) {
-    leaves += Array.isArray(b?.children) ? b.children.length : 0;
-  }
-  return leaves;
-}
-
-function upsertMindMapHistory(sessionId, mind, messageCount = 0) {
-  if (!sessionId || !hasMindMapChildren(mind)) return;
-  const history = getMindMapHistory(sessionId);
-  const snapshot = {
-    message_count: Number(messageCount) || 0,
-    branch_count: Array.isArray(mind.children) ? mind.children.length : 0,
-    leaf_count: mindMapLeafCount(mind),
-    mind_map: cloneJsonSafe(mind),
-  };
-
-  const sameMsgIdx =
-    snapshot.message_count > 0
-      ? history.findIndex((h) => (h.message_count || 0) === snapshot.message_count)
-      : -1;
-  if (sameMsgIdx >= 0) {
-    history[sameMsgIdx] = snapshot;
-  } else {
-    history.push(snapshot);
-  }
-
-  if (history.length > MIND_MAP_HISTORY_LIMIT) {
-    history.splice(0, history.length - MIND_MAP_HISTORY_LIMIT);
-  }
-}
-
-function getActiveMindMapForSession(sessionId, fallbackMind = {}) {
-  const history = getMindMapHistory(sessionId);
-  const previewIdx = getMindMapPreviewIndex(sessionId);
-  if (
-    previewIdx != null &&
-    previewIdx >= 0 &&
-    previewIdx < history.length &&
-    hasMindMapChildren(history[previewIdx]?.mind_map)
-  ) {
-    return history[previewIdx].mind_map;
-  }
-  return mindMapLatestBySession.get(sessionId) || fallbackMind;
-}
-
 function toggleInsightsPanel(open) {
   const body = document.getElementById("chatBody");
   const panel = document.getElementById("insightsPanel");
@@ -139,7 +54,12 @@ function clearInsightsPanel() {
   const chart = document.getElementById("stanceChartHost");
   const legend = document.getElementById("stanceGapLegend");
   if (highlights) highlights.innerHTML = "";
-  if (mind) mind.innerHTML = '<p class="insights-empty">討論進行中，重點會自動更新…</p>';
+  if (mind) {
+    const topic = currentSession ? sessionTopic(currentSession) : '討論主題';
+    const initialMind = { title: topic, children: [] };
+    if (currentSessionId) mindMapLatestBySession.set(currentSessionId, cloneJsonSafe(initialMind));
+    renderMindMap(initialMind);
+  }
   if (chart) chart.innerHTML = '<p class="insights-empty">尚無名人發言紀錄</p>';
   if (legend) legend.innerHTML = "";
 }
@@ -172,8 +92,15 @@ async function fetchAndRenderInsights(force = false) {
       {},
       currentSessionId
     );
-    lastInsightsMsgCount = data.message_count || 0;
-    renderInsights(data.insights || {});
+    const nextMessageCount = Number(data.message_count) || 0;
+    const previousMind = currentSessionId ? mindMapLatestBySession.get(currentSessionId) || null : null;
+    renderInsights(data.insights || {}, {
+      // renderMindMap 會依 key 比對差異；每次允許動畫，只有新節點才會播放。
+      animate: true,
+      previousMind,
+      messageCount: nextMessageCount,
+    });
+    lastInsightsMsgCount = nextMessageCount;
   } catch (err) {
     const mind = document.getElementById("mindMapHost");
     if (mind) mind.innerHTML = `<p class="insights-empty">${escapeHtml(err.message || "無法載入圖譜")}</p>`;
@@ -190,7 +117,7 @@ function measureTextWidth(text, fontSize = 11, weight = 400) {
   return ctx.measureText(text).width;
 }
 
-function renderInsights(insights) {
+function renderInsights(insights, { animate = false, previousMind = null, messageCount = lastInsightsMsgCount } = {}) {
   const hint = document.querySelector(".insights-panel-hint");
   if (hint) {
     if (insights.stale) {
@@ -220,9 +147,13 @@ function renderInsights(insights) {
     }
   }
   if (currentSessionId && insights?.mind_map) {
-    if (hasMindMapChildren(insights.mind_map)) {
-      mindMapLatestBySession.set(currentSessionId, cloneJsonSafe(insights.mind_map));
-      upsertMindMapHistory(currentSessionId, insights.mind_map, lastInsightsMsgCount);
+    const hasAiSummary = Number(insights.mind_map_format_version) >= 2;
+    const visibleMind = hasAiSummary
+      ? cleanMindMap(insights.mind_map)
+      : { title: insights.mind_map.title || sessionTopic(currentSession), children: [] };
+    mindMapLatestBySession.set(currentSessionId, cloneJsonSafe(visibleMind));
+    if (hasAiSummary && hasMindMapChildren(visibleMind)) {
+      upsertMindMapHistory(currentSessionId, visibleMind, messageCount);
     }
     const history = getMindMapHistory(currentSessionId);
     const idx = getMindMapPreviewIndex(currentSessionId);
@@ -232,8 +163,20 @@ function renderInsights(insights) {
     }
   }
   try {
-    const mindToRender = getActiveMindMapForSession(currentSessionId, insights.mind_map || {});
-    renderMindMap(mindToRender || {});
+    const isPreviewingHistory = getMindMapPreviewIndex(currentSessionId) != null;
+    const mindToRender = getActiveMindMapForSession(currentSessionId, cleanMindMap(insights.mind_map || {}));
+    const emptyLabel = insights.ai_available === false
+      ? '設定 OpenAI API 後即可統整名人觀點'
+      : insights.mind_map_analysis_error
+        ? 'AI 摘要暫時失敗，點 ↻ 重試'
+      : messageCount < 2
+        ? '討論開始後會逐步整理觀點'
+        : 'AI 正在整理目前的討論';
+    renderMindMap(mindToRender || {}, {
+      animate: animate && !isPreviewingHistory,
+      previousMind: isPreviewingHistory ? null : previousMind,
+      emptyLabel,
+    });
   } catch (err) {
     console.error("renderMindMap", err);
     const mind = document.getElementById("mindMapHost");
@@ -334,531 +277,6 @@ function appendSvgAvatar(svg, slug, x, y, size, seriesItem, color) {
 
 
 
-
-const MIND_MAP_BRANCH_THEMES = [
-  { fill: "#dbeafe", stroke: "#2563eb", icon: "★" },
-  { fill: "#dcfce7", stroke: "#16a34a", icon: "⚙" },
-  { fill: "#fef9c3", stroke: "#ca8a04", icon: "💡" },
-  { fill: "#fce7f3", stroke: "#db2777", icon: "♥" },
-  { fill: "#ede9fe", stroke: "#7c3aed", icon: "⚠" },
-  { fill: "#ccfbf1", stroke: "#0d9488", icon: "➤" },
-  { fill: "#ffedd5", stroke: "#ea580c", icon: "◆" },
-  { fill: "#e0e7ff", stroke: "#4f46e5", icon: "●" },
-];
-
-
-
-function mindMapWobble(seed, amp = 3) {
-  const h = Math.sin(seed * 12.9898 + seed * 78.233) * 43758.5453;
-  return (h - Math.floor(h) - 0.5) * 2 * amp;
-}
-
-function sketchCurvePath(x1, y1, x2, y2, seed = 0) {
-  const mx = (x1 + x2) / 2 + mindMapWobble(seed, 8);
-  const my = (y1 + y2) / 2 + mindMapWobble(seed + 1, 8);
-  const c1x = x1 + (mx - x1) * 0.55 + mindMapWobble(seed + 2, 4);
-  const c1y = y1 + (my - y1) * 0.55 + mindMapWobble(seed + 3, 4);
-  const c2x = mx + (x2 - mx) * 0.45 + mindMapWobble(seed + 4, 4);
-  const c2y = my + (y2 - my) * 0.45 + mindMapWobble(seed + 5, 4);
-  return `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
-}
-
-function splitMindMapTitle(text, maxLen = 11) {
-  const s = String(text || "").trim();
-  if (s.length <= maxLen) return [s];
-  const mid = Math.ceil(s.length / 2);
-  let split = mid;
-  for (let i = mid; i < s.length && i < mid + 5; i++) {
-    if (/[，、與和及\s]/.test(s[i])) {
-      split = i + 1;
-      break;
-    }
-  }
-  return [s.slice(0, split).trim(), s.slice(split).trim()].filter(Boolean);
-}
-
-function cloudPath(cx, cy, w, h) {
-  const x = cx - w / 2;
-  const y = cy - h / 2;
-  return [
-    `M ${x + w * 0.2} ${y + h * 0.55}`,
-    `C ${x + w * 0.05} ${y + h * 0.2}, ${x + w * 0.35} ${y + h * 0.05}, ${x + w * 0.5} ${y + h * 0.18}`,
-    `C ${x + w * 0.62} ${y - h * 0.02}, ${x + w * 0.82} ${y + h * 0.08}, ${x + w * 0.88} ${y + h * 0.32}`,
-    `C ${x + w * 1.02} ${y + h * 0.52}, ${x + w * 0.88} ${y + h * 0.82}, ${x + w * 0.62} ${y + h * 0.88}`,
-    `C ${x + w * 0.42} ${y + h * 0.98}, ${x + w * 0.18} ${y + h * 0.82}, ${x + w * 0.2} ${y + h * 0.55}`,
-    "Z",
-  ].join(" ");
-}
-
-const MIND_MAP_CARD_H = 52;
-const MIND_MAP_CARD_GAP = 12;
-
-function layoutSectorMindMap(mind, hostW) {
-  const branches = (mind.children || []).slice(0, hostW < 340 ? 4 : 6);
-  const n = Math.max(branches.length, 1);
-  const sectorWidth = (2 * Math.PI) / n;
-  const branchR = hostW < 760 ? 88 : 98;
-  const cardW = Math.min(168, Math.max(116, hostW * 0.36));
-  const baseCardH = MIND_MAP_CARD_H + 6;
-  const baseDist = branchR + 92;
-  const maxFan = sectorWidth * 0.68;
-
-  const rootLabel = mind.title || "討論主題";
-  const rootW = Math.min(158, Math.max(110, measureTextWidth(rootLabel, 11, 700) + 38));
-  const rootH = splitMindMapTitle(rootLabel).length > 1 ? 52 : 42;
-
-  let maxReach = branchR + 40;
-  const layoutBranches = branches.map((branch, i) => {
-    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    const bx = 0 + branchR * cos;
-    const by = 0 + branchR * sin;
-    const branchLabel = String(branch.label || "議題");
-    const branchW = Math.min(146, Math.max(96, measureTextWidth(branchLabel, 10, 700) + 34));
-    const branchH = 32;
-
-    const rawLeaves =
-      branch.children?.length > 0
-        ? branch.children
-        : branch.person_slug || branch.speaker
-          ? [branch]
-          : [];
-
-    const count = Math.min(4, rawLeaves.length);
-    const leaves = rawLeaves.slice(0, 4).map((leaf, li) => {
-      let leafAngle = angle;
-      const speaker = leaf.speaker || "";
-      const raw = String(leaf.quote || leaf.label || "");
-      const quote =
-        speaker && raw.includes("：")
-          ? raw.split("：").slice(1).join("：").trim() || raw
-          : raw;
-      const approxCharsPerLine = Math.max(14, Math.floor((cardW - 26) / 7));
-      const quoteLines = Math.max(1, Math.ceil((quote || "").length / approxCharsPerLine));
-      const leafH = Math.min(132, Math.max(baseCardH, baseCardH + (quoteLines - 2) * 12));
-
-      let dist = baseDist + leafH / 2;
-      if (count > 1) {
-        const fanT = count === 1 ? 0 : (li / (count - 1) - 0.5) * 2;
-        leafAngle = angle + fanT * (maxFan / 2);
-        dist = baseDist + leafH / 2 + Math.abs(fanT) * (cardW * 0.42 + 12);
-      }
-      const lx = dist * Math.cos(leafAngle);
-      const ly = dist * Math.sin(leafAngle);
-      maxReach = Math.max(maxReach, Math.hypot(lx, ly) + cardW / 2 + leafH / 2);
-      return {
-        x: lx,
-        y: ly,
-        w: cardW,
-        h: leafH,
-        cos: Math.cos(leafAngle),
-        sin: Math.sin(leafAngle),
-        speaker,
-        quote,
-        person_slug: leaf.person_slug || "",
-      };
-    });
-
-    return {
-      index: i,
-      angle,
-      cos,
-      sin,
-      x: bx,
-      y: by,
-      w: branchW,
-      h: branchH,
-      label: branchLabel,
-      leaves,
-    };
-  });
-
-  const size = Math.max(400, Math.ceil(maxReach * 2 + 60));
-  const cx = size / 2;
-  const cy = size / 2;
-
-  layoutBranches.forEach((b) => {
-    b.x += cx;
-    b.y += cy;
-    b.leaves.forEach((leaf) => {
-      leaf.x += cx;
-      leaf.y += cy;
-    });
-  });
-
-  return {
-    size,
-    cx,
-    cy,
-    root: { label: rootLabel, x: cx, y: cy, w: rootW, h: rootH },
-    branches: layoutBranches,
-    cardW,
-  };
-}
-
-function sectorMindMapBounds(layout, pad = 24) {
-  let minX = layout.root.x - layout.root.w / 2;
-  let maxX = layout.root.x + layout.root.w / 2;
-  let minY = layout.root.y - layout.root.h / 2;
-  let maxY = layout.root.y + layout.root.h / 2;
-  for (const b of layout.branches) {
-    minX = Math.min(minX, b.x - b.w / 2);
-    maxX = Math.max(maxX, b.x + b.w / 2);
-    minY = Math.min(minY, b.y - b.h / 2);
-    maxY = Math.max(maxY, b.y + b.h / 2);
-    for (const leaf of b.leaves) {
-      minX = Math.min(minX, leaf.x - leaf.w / 2);
-      maxX = Math.max(maxX, leaf.x + leaf.w / 2);
-      minY = Math.min(minY, leaf.y - leaf.h / 2);
-      maxY = Math.max(maxY, leaf.y + leaf.h / 2);
-    }
-  }
-  return { minX: minX - pad, minY: minY - pad, maxX: maxX + pad, maxY: maxY + pad };
-}
-
-function appendMindMapLeafCard(svg, nodeLayer, leaf, theme, branchIndex, NS) {
-  const x = leaf.x - leaf.w / 2;
-  const y = leaf.y - leaf.h / 2;
-  const g = document.createElementNS(NS, "g");
-  g.setAttribute("class", "mind-map-leaf-card-wrap");
-
-  const rect = document.createElementNS(NS, "rect");
-  rect.setAttribute("x", String(x));
-  rect.setAttribute("y", String(y));
-  rect.setAttribute("width", String(leaf.w));
-  rect.setAttribute("height", String(leaf.h));
-  rect.setAttribute("rx", "10");
-  rect.setAttribute("fill", "#fff");
-  rect.setAttribute("stroke", theme.stroke);
-  rect.setAttribute("stroke-width", "2");
-  rect.setAttribute("class", "mind-map-leaf-card-bg");
-  g.appendChild(rect);
-
-  const fo = document.createElementNS(NS, "foreignObject");
-  fo.setAttribute("x", String(x + 4));
-  fo.setAttribute("y", String(y + 4));
-  fo.setAttribute("width", String(leaf.w - 8));
-  fo.setAttribute("height", String(leaf.h - 8));
-
-  const row = document.createElement("div");
-  row.className = "mind-map-leaf-card";
-  row.style.setProperty("--leaf-accent", theme.stroke);
-
-  if (leaf.person_slug) {
-    const meta = insightsPersonMeta(leaf.person_slug);
-    row.appendChild(avatarEl(meta.name, "avatar xs", leaf.person_slug, meta.avatar || ""));
-  }
-  const body = document.createElement("div");
-  body.className = "mind-map-leaf-body";
-  if (leaf.speaker) {
-    const who = document.createElement("div");
-    who.className = "mind-map-leaf-speaker";
-    who.textContent = leaf.speaker;
-    body.appendChild(who);
-  }
-  const q = document.createElement("div");
-  q.className = "mind-map-leaf-quote";
-  q.textContent = leaf.quote || "—";
-  body.appendChild(q);
-  row.appendChild(body);
-
-  fo.appendChild(row);
-  g.appendChild(fo);
-  nodeLayer.appendChild(g);
-}
-
-let mindMapHistoryModalOpen = false;
-
-function buildMindMapSvg(mind, hostWidth) {
-  const branches = mind.children || [];
-  if (!branches.length) return null;
-
-  const hostW = Math.max(280, hostWidth || 300);
-  const layout = layoutSectorMindMap(mind, hostW);
-  const bounds = sectorMindMapBounds(layout, 20);
-  const viewW = bounds.maxX - bounds.minX;
-  const viewH = bounds.maxY - bounds.minY;
-
-  const NS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(NS, "svg");
-  svg.setAttribute("class", "mind-map-svg mind-map-svg--radial");
-  svg.setAttribute("viewBox", `${bounds.minX} ${bounds.minY} ${viewW} ${viewH}`);
-  svg.setAttribute("width", "100%");
-  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-
-  const linkLayer = document.createElementNS(NS, "g");
-  const nodeLayer = document.createElementNS(NS, "g");
-  const { root } = layout;
-
-  layout.branches.forEach((branch) => {
-    const theme = MIND_MAP_BRANCH_THEMES[branch.index % MIND_MAP_BRANCH_THEMES.length];
-    const seed = branch.index * 19 + 5;
-
-    const rootEdgeX = root.x + (branch.x - root.x) * 0.35;
-    const rootEdgeY = root.y + (branch.y - root.y) * 0.35;
-    const branchEdgeX = branch.x - (branch.x - root.x) * 0.15;
-    const branchEdgeY = branch.y - (branch.y - root.y) * 0.15;
-
-    const mainLink = document.createElementNS(NS, "path");
-    mainLink.setAttribute("class", "mind-map-sketch-line");
-    mainLink.setAttribute("stroke", theme.stroke);
-    mainLink.setAttribute("d", sketchCurvePath(rootEdgeX, rootEdgeY, branchEdgeX, branchEdgeY, seed));
-    linkLayer.appendChild(mainLink);
-
-    branch.leaves.forEach((leaf, li) => {
-      const dx = leaf.x - branch.x;
-      const dy = leaf.y - branch.y;
-      const len = Math.hypot(dx, dy) || 1;
-      const ux = dx / len;
-      const uy = dy / len;
-      const fromX = branch.x + ux * (branch.w / 2 + 2);
-      const fromY = branch.y + uy * (branch.h / 2 + 2);
-      const toX = leaf.x - ux * (leaf.w / 2 + 4);
-      const toY = leaf.y - uy * (leaf.h / 2 + 4);
-      const link = document.createElementNS(NS, "path");
-      link.setAttribute("class", "mind-map-sketch-line mind-map-sketch-line--leaf");
-      link.setAttribute("stroke", theme.stroke);
-      link.setAttribute("d", sketchCurvePath(fromX, fromY, toX, toY, seed + li * 4 + 2));
-      linkLayer.appendChild(link);
-      appendMindMapLeafCard(svg, nodeLayer, leaf, theme, branch.index, NS);
-    });
-
-    const bg = document.createElementNS(NS, "g");
-    bg.setAttribute("class", "mind-map-branch");
-    const rect = document.createElementNS(NS, "rect");
-    rect.setAttribute("x", String(branch.x - branch.w / 2));
-    rect.setAttribute("y", String(branch.y - branch.h / 2));
-    rect.setAttribute("width", String(branch.w));
-    rect.setAttribute("height", String(branch.h));
-    rect.setAttribute("rx", "10");
-    rect.setAttribute("fill", theme.fill);
-    rect.setAttribute("stroke", theme.stroke);
-    rect.setAttribute("stroke-width", "2.2");
-    bg.appendChild(rect);
-
-    const icon = document.createElementNS(NS, "text");
-    icon.setAttribute("x", String(branch.x - branch.w / 2 + 11));
-    icon.setAttribute("y", String(branch.y + 4));
-    icon.setAttribute("class", "mind-map-branch-icon");
-    icon.setAttribute("fill", theme.stroke);
-    icon.textContent = theme.icon;
-    bg.appendChild(icon);
-
-    const label = document.createElementNS(NS, "text");
-    label.setAttribute("x", String(branch.x - branch.w / 2 + 22));
-    label.setAttribute("y", String(branch.y + 4));
-    label.setAttribute("class", "mind-map-branch-label");
-    label.setAttribute("fill", theme.stroke);
-    label.textContent = branch.label;
-    bg.appendChild(label);
-    nodeLayer.appendChild(bg);
-  });
-
-  const centerG = document.createElementNS(NS, "g");
-  centerG.setAttribute("class", "mind-map-center");
-  const cloud = document.createElementNS(NS, "path");
-  cloud.setAttribute("d", cloudPath(root.x, root.y, root.w, root.h));
-  cloud.setAttribute("class", "mind-map-cloud");
-  centerG.appendChild(cloud);
-  const titleLines = splitMindMapTitle(root.label);
-  titleLines.forEach((line, i) => {
-    const t = document.createElementNS(NS, "text");
-    t.setAttribute("x", String(root.x));
-    t.setAttribute("y", String(root.y + (i - (titleLines.length - 1) / 2) * 13 + 4));
-    t.setAttribute("text-anchor", "middle");
-    t.setAttribute("class", "mind-map-center-text");
-    t.textContent = line;
-    centerG.appendChild(t);
-  });
-  nodeLayer.appendChild(centerG);
-
-  svg.appendChild(linkLayer);
-  svg.appendChild(nodeLayer);
-  return svg;
-}
-
-function rerenderMindMapFromHistory() {
-  if (!currentSessionId) return;
-  const latest = mindMapLatestBySession.get(currentSessionId) || {};
-  const activeMind = getActiveMindMapForSession(currentSessionId, latest);
-  renderMindMap(activeMind || latest || {});
-}
-
-function renderMindMapHistoryLauncher(host) {
-  const old = host.querySelector(".mind-map-history-launcher");
-  if (old) old.remove();
-  if (!currentSessionId) return;
-  const history = getMindMapHistory(currentSessionId);
-  if (!history || history.length < 2) return;
-
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "mind-map-history-launcher";
-  btn.title = "預覽歷史紀錄";
-  btn.setAttribute("aria-label", "預覽歷史紀錄");
-  btn.textContent = "預覽";
-  btn.addEventListener("click", () => {
-    mindMapHistoryModalOpen = true;
-    rerenderMindMapFromHistory();
-  });
-  host.appendChild(btn);
-}
-
-function renderMindMapHistoryModal(host) {
-  const old = document.querySelector(".mind-map-history-overlay");
-  if (old) old.remove();
-  if (!mindMapHistoryModalOpen || !currentSessionId) return;
-  const history = getMindMapHistory(currentSessionId);
-  if (!history || history.length < 2) {
-    mindMapHistoryModalOpen = false;
-    return;
-  }
-
-  const activePreview = getMindMapPreviewIndex(currentSessionId);
-  const activeIdx =
-    activePreview != null && activePreview >= 0 && activePreview < history.length
-      ? activePreview
-      : history.length - 1;
-
-  const overlay = document.createElement("div");
-  overlay.className = "mind-map-history-overlay";
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-      mindMapHistoryModalOpen = false;
-      rerenderMindMapFromHistory();
-    }
-  });
-
-  const modal = document.createElement("div");
-  modal.className = "mind-map-history-modal";
-  overlay.appendChild(modal);
-
-  const close = document.createElement("button");
-  close.type = "button";
-  close.className = "mind-map-history-close";
-  close.textContent = "×";
-  close.setAttribute("aria-label", "關閉歷史預覽");
-  close.addEventListener("click", () => {
-    mindMapHistoryModalOpen = false;
-    rerenderMindMapFromHistory();
-  });
-  modal.appendChild(close);
-
-  const head = document.createElement("div");
-  head.className = "mind-map-history-head";
-  const title = document.createElement("strong");
-  title.textContent = "心智圖歷史";
-  head.appendChild(title);
-  const step = document.createElement("span");
-  step.className = "mind-map-history-step";
-  step.textContent = `${activeIdx + 1}/${history.length}`;
-  head.appendChild(step);
-  modal.appendChild(head);
-
-  const previewHost = document.createElement("div");
-  previewHost.className = "mind-map-history-preview-host";
-  const previewMind = history[activeIdx]?.mind_map || {};
-  const previewSvg = buildMindMapSvg(
-    previewMind,
-    Math.max(360, Math.round((host.clientWidth || 420) * 0.86))
-  );
-  if (previewSvg) {
-    previewSvg.classList.add("mind-map-svg--history-preview");
-    previewHost.appendChild(previewSvg);
-  } else {
-    previewHost.innerHTML = '<p class="insights-empty">此版本尚無心智圖</p>';
-  }
-  modal.appendChild(previewHost);
-
-  const controls = document.createElement("div");
-  controls.className = "mind-map-history-modal-controls";
-  modal.appendChild(controls);
-
-  const slider = document.createElement("input");
-  slider.type = "range";
-  slider.min = "0";
-  slider.max = String(history.length - 1);
-  slider.value = String(activeIdx);
-  slider.className = "mind-map-history-range";
-  slider.addEventListener("input", (e) => {
-    const idx = Number(e.target.value) || 0;
-    if (idx >= history.length - 1) {
-      setMindMapPreviewIndex(currentSessionId, null);
-    } else {
-      setMindMapPreviewIndex(currentSessionId, idx);
-    }
-    rerenderMindMapFromHistory();
-  });
-  controls.appendChild(slider);
-
-  const footer = document.createElement("div");
-  footer.className = "mind-map-history-controls";
-  const btnPrev = document.createElement("button");
-  btnPrev.type = "button";
-  btnPrev.className = "mind-map-history-btn";
-  btnPrev.textContent = "◀";
-  btnPrev.disabled = activeIdx <= 0;
-  btnPrev.addEventListener("click", () => {
-    const idx = Math.max(0, activeIdx - 1);
-    setMindMapPreviewIndex(currentSessionId, idx);
-    rerenderMindMapFromHistory();
-  });
-  footer.appendChild(btnPrev);
-
-  const btnLatest = document.createElement("button");
-  btnLatest.type = "button";
-  btnLatest.className = "mind-map-history-btn" + (activeIdx === history.length - 1 ? " is-active" : "");
-  btnLatest.textContent = "最新";
-  btnLatest.addEventListener("click", () => {
-    setMindMapPreviewIndex(currentSessionId, null);
-    rerenderMindMapFromHistory();
-  });
-  footer.appendChild(btnLatest);
-
-  const btnNext = document.createElement("button");
-  btnNext.type = "button";
-  btnNext.className = "mind-map-history-btn";
-  btnNext.textContent = "▶";
-  btnNext.disabled = activeIdx >= history.length - 1;
-  btnNext.addEventListener("click", () => {
-    const idx = Math.min(history.length - 1, activeIdx + 1);
-    if (idx >= history.length - 1) {
-      setMindMapPreviewIndex(currentSessionId, null);
-    } else {
-      setMindMapPreviewIndex(currentSessionId, idx);
-    }
-    rerenderMindMapFromHistory();
-  });
-  footer.appendChild(btnNext);
-  controls.appendChild(footer);
-
-  const meta = history[activeIdx] || {};
-  const msgTag = document.createElement("div");
-  msgTag.className = "mind-map-history-meta";
-  msgTag.textContent = meta.message_count
-    ? `第 ${meta.message_count} 則訊息`
-    : `版本 ${activeIdx + 1}`;
-  controls.appendChild(msgTag);
-
-  document.body.appendChild(overlay);
-}
-
-function renderMindMap(mind) {
-  const host = document.getElementById("mindMapHost");
-  if (!host) return;
-  const svg = buildMindMapSvg(mind, host.clientWidth || 300);
-  host.innerHTML = "";
-  if (!svg) {
-    host.innerHTML = '<p class="insights-empty">尚無足夠內容產生心智圖</p>';
-    renderMindMapHistoryLauncher(host);
-    renderMindMapHistoryModal(host);
-    return;
-  }
-  host.appendChild(svg);
-  renderMindMapHistoryLauncher(host);
-  renderMindMapHistoryModal(host);
-}
 
 function clusterByScore(items, threshold) {
   const clusters = [];
