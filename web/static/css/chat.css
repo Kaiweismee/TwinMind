@@ -621,6 +621,10 @@
   font-size: 0.85rem;
   box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
+.source-card--target {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px #818cf833, 0 2px 8px #3730a315;
+}
 .source-card-head {
   display: flex;
   align-items: flex-start;

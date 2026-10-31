@@ -462,12 +462,6 @@ function drawMindMapLinks(canvas) {
     if (!leaves.length) return;
     const listRect = branch.querySelector('.mind-map-paper-leaves').getBoundingClientRect();
     const flow = branch.dataset.flow || 'down';
-    const isLeft = branch.dataset.side === 'left';
-    const spineX = (flow === 'right'
-      ? listRect.left
-      : flow === 'left' || isLeft
-        ? listRect.right
-        : listRect.left) - origin.left;
     const headingX = (flow === 'right'
       ? head.right
       : flow === 'left'
@@ -480,23 +474,25 @@ function drawMindMapLinks(canvas) {
         : head.top + head.height / 2) - origin.top;
     const leafRects = leaves.map(leaf => leaf.getBoundingClientRect());
     const leafCenters = leafRects.map(rect => (rect.top + rect.height / 2 - origin.top) / scale);
-    const firstY = leafCenters[0];
-    const lastY = leafCenters[leafCenters.length - 1];
-    const localSpineX = spineX / scale;
     const localHeadingX = headingX / scale;
     const localHeadingY = headingY / scale;
     const listTop = (listRect.top - origin.top) / scale;
     const listBottom = (listRect.bottom - origin.top) / scale;
     const spineStartDelay = (parseFloat(branch.style.getPropertyValue('--branch-delay')) || 0) + 220;
-    const headingOutX = head.left + head.width / 2 - origin.left;
-    const headingOutY = (flow === 'up' ? head.top : head.bottom) - origin.top;
-    const localHeadingOutX = headingOutX / scale;
-    const localHeadingOutY = headingOutY / scale;
-    const spinePath = flow === 'up'
-      ? `M ${localHeadingOutX} ${localHeadingOutY} L ${localHeadingOutX} ${listBottom} L ${localSpineX} ${listBottom} L ${localSpineX} ${listTop}`
+    const listSideX = (flow === 'right'
+      ? listRect.left
+      : flow === 'left'
+        ? listRect.right
+        : listRect.left + listRect.width / 2) - origin.left;
+    const leafTargetY = flow === 'up'
+      ? listBottom
       : flow === 'down'
-        ? `M ${localHeadingOutX} ${localHeadingOutY} L ${localHeadingOutX} ${listTop} L ${localSpineX} ${listTop} L ${localSpineX} ${listBottom}`
-        : `M ${localHeadingX} ${localHeadingY} C ${localHeadingX + (flow === 'right' ? 20 : -20)} ${localHeadingY}, ${localSpineX} ${firstY}, ${localSpineX} ${firstY} L ${localSpineX} ${lastY}`;
+        ? listTop
+        : leafCenters.reduce((closest, y) =>
+            Math.abs(y - localHeadingY) < Math.abs(closest - localHeadingY) ? y : closest,
+            leafCenters[0]
+          );
+    const spinePath = `M ${localHeadingX} ${localHeadingY} L ${listSideX / scale} ${leafTargetY}`;
     upsertPath(
       JSON.stringify(['spine', branchKey]),
       spinePath,
@@ -686,6 +682,7 @@ function reconcileMindMapCanvas(currentCanvas, nextCanvas) {
 function openMindMapExpanded(mind, trigger) {
   document.querySelector('.mind-map-expanded-dialog')?.close();
   const dialog = mindMapElement('dialog', 'mind-map-expanded-dialog');
+  document.body.classList.add('mind-map-expanded-open');
   dialog.setAttribute('aria-label', '心智圖完整檢視');
   const bar = mindMapElement('div', 'mind-map-expanded-bar');
   const title = mindMapElement('div', 'mind-map-expanded-title');
@@ -706,6 +703,7 @@ function openMindMapExpanded(mind, trigger) {
   requestAnimationFrame(() => fitMindMapZoom(scroll));
   dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
   dialog.addEventListener('close', () => {
+    document.body.classList.remove('mind-map-expanded-open');
     dialog.remove();
     scheduleMindMapLinks();
     if (trigger?.isConnected) trigger.focus();

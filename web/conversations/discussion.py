@@ -14,8 +14,10 @@ from web.core.rag_backend import format_context, search_chunks
 
 from web.repositories import chat_store
 
+CITE_MARKER_RE = re.compile(r"\[(\d+|推論)\]|【(\d+|推論)】")
 CITE_RE = re.compile(
-    r"([^[\]【】]+?)(?:\[(?:(\d+)|推論)\]|【(?:(\d+)|推論)】)"
+    r"([^[\]【】]+?)((?:\[(?:\d+|推論)\]|【(?:\d+|推論)】)"
+    r"(?:[ \t]*(?:\[(?:\d+|推論)\]|【(?:\d+|推論)】))*)"
 )
 
 
@@ -112,22 +114,24 @@ def parse_cited_reply(raw: str, sources: list[dict[str, Any]]) -> tuple[str, lis
             })
 
         clause = m.group(1).strip()
-        ref = m.group(2) or m.group(3)
+        markers = [
+            marker.group(1) or marker.group(2)
+            for marker in CITE_MARKER_RE.finditer(m.group(2))
+        ]
+        refs = [int(marker) for marker in markers if marker.isdigit()]
+        refs = [idx for idx in refs if 1 <= idx <= len(sources)]
         if not clause:
             last = m.end()
             continue
 
         display_parts.append(clause)
-        if ref:
-            idx = int(ref)
-            chunk_ids: list[int] = []
-            if 1 <= idx <= len(sources):
-                chunk_ids = [int(sources[idx - 1]["chunk_id"])]
+        if refs:
+            chunk_ids = [int(sources[idx - 1]["chunk_id"]) for idx in refs]
             segments.append({
                 "text": clause,
-                "source_refs": [idx],
+                "source_refs": refs,
                 "chunk_ids": chunk_ids,
-                "inference": False,
+                "inference": "推論" in markers,
             })
         else:
             segments.append({
@@ -188,12 +192,18 @@ def _append_session_context(
     )
     if not sess_ctx.strip():
         return context, chunk_ids, sources
+    # 房主資料先出現在提示詞與 sources；名人資料編號需接續其後，才能讓 [n] 對到相同來源。
+    personal_context = (
+        format_context(sources, start_index=len(sess_src) + 1)
+        if sources
+        else ""
+    )
     merged = (
-        f"【房主提供的參考資料】\n{sess_ctx}\n\n【你的參考資料】\n{context}"
-        if context.strip() and "未檢索到" not in context
+        f"【房主提供的參考資料】\n{sess_ctx}\n\n【你的參考資料】\n{personal_context}"
+        if personal_context.strip()
         else f"【房主提供的參考資料】\n{sess_ctx}"
     )
-    return merged, chunk_ids + sess_ids, sources + sess_src
+    return merged, sess_ids + chunk_ids, sess_src + sources
 
 
 def _llm(client: Any, model: str, system: str, user: str, temperature: float = 0.7) -> str:
@@ -450,13 +460,19 @@ def _reply_user_twin(
                 user_id, session_id, rag_q, top_k=min(6, top_k)
             )
             if sess_ctx.strip():
+                # 與下方來源陣列順序一致：聊天室資料先編號，私人資料接續編號。
+                private_ctx = (
+                    format_context(sources, start_index=len(sess_src) + 1)
+                    if sources
+                    else user_rag_context
+                )
                 user_rag_context = (
-                    f"{sess_ctx}\n\n{user_rag_context}"
-                    if user_rag_context.strip()
+                    f"{sess_ctx}\n\n{private_ctx}"
+                    if private_ctx.strip()
                     else sess_ctx
                 )
-                chunk_ids = chunk_ids + sess_ids
-                sources = sources + sess_src
+                chunk_ids = sess_ids + chunk_ids
+                sources = sess_src + sources
 
     cite_rule = (
         "【引用規則】若依據【你的私人資料】發言，句尾標 [1][2]…；"

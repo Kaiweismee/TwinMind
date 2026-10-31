@@ -224,7 +224,7 @@ function parseCiteSegmentsFromContent(content, sourceCount) {
   const text = String(content || "")
     .replace(/【(\d+)】/g, "[$1]")
     .replace(/【推論】/g, "[推論]");
-  const re = /([^[\]]+?)(?:\[(\d+)\]|\[推論\])/g;
+  const re = /([^[\]]+?)(\[(?:\d+|推論)\](?:[ \t]*\[(?:\d+|推論)\])*)/g;
   const segments = [];
   let last = 0;
   let m;
@@ -234,17 +234,87 @@ function parseCiteSegmentsFromContent(content, sourceCount) {
       last = m.index + m[0].length;
       continue;
     }
-    const ref = m[2] ? parseInt(m[2], 10) : null;
-    if (ref != null && ref >= 1 && ref <= sourceCount) {
-      segments.push({ text: clause, source_refs: [ref], inference: false });
-    } else {
-      segments.push({ text: clause, source_refs: [], inference: true });
-    }
+    const markers = [...m[2].matchAll(/\[(\d+|推論)\]/g)].map((item) => item[1]);
+    const refs = [...new Set(markers
+      .filter((marker) => /^\d+$/.test(marker))
+      .map(Number)
+      .filter((ref) => ref >= 1 && ref <= sourceCount))];
+    segments.push({
+      text: clause,
+      source_refs: refs,
+      inference: markers.includes("推論") || refs.length === 0,
+    });
     last = m.index + m[0].length;
   }
   const tail = text.slice(last).trim();
   if (tail) segments.push({ text: tail, source_refs: [], inference: true });
   return segments.length ? segments : [];
+}
+
+function stripInferenceMarkers(text) {
+  return String(text || "")
+    .replace(/(?:\[\s*推論\s*\]|【\s*推論\s*】|［\s*推論\s*］)/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+([，。；：！？])/g, "$1");
+}
+
+function appendMessageText(bodyEl, text, sources, segment, name, row) {
+  const cleaned = stripInferenceMarkers(text);
+  const citationPattern = /\[(\d+)\]|【(\d+)】/g;
+  const shownRefs = new Set();
+  let cursor = 0;
+  let match;
+  const appendText = (value) => {
+    if (!value) return;
+    const clause = document.createElement("span");
+    clause.className = "msg-clause";
+    clause.textContent = value;
+    bodyEl.appendChild(clause);
+  };
+  const appendReference = (ref) => {
+    const src = sources[ref - 1];
+    if (!src) return false;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cite-mark";
+    btn.textContent = `[${ref}]`;
+    btn.title = "查看這句話依據的資料";
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      document.querySelectorAll(".msg-row--ref-active").forEach((el) => {
+        el.classList.remove("msg-row--ref-active");
+      });
+      row.classList.add("msg-row--ref-active");
+      fillSourcesDrawer(name, [src], {
+        highlight: `依據：${stripInferenceMarkers(segment?.text || cleaned).slice(0, 80)}`,
+        selectedRef: ref,
+        sourceIndexes: [ref],
+      });
+      openSourcesDrawer(true);
+      requestAnimationFrame(() => {
+        const body = document.getElementById("sourcesDrawerBody");
+        const target = body?.querySelector(`[data-source-index="${ref}"]`);
+        if (!body || !target) return;
+        const top = target.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop;
+        body.scrollTo({ top: Math.max(0, top - body.clientHeight / 3), behavior: "smooth" });
+      });
+    });
+    bodyEl.appendChild(btn);
+    shownRefs.add(ref);
+    return true;
+  };
+
+  while ((match = citationPattern.exec(cleaned)) !== null) {
+    appendText(cleaned.slice(cursor, match.index));
+    appendReference(Number(match[1] || match[2]));
+    cursor = match.index + match[0].length;
+  }
+  appendText(cleaned.slice(cursor));
+
+  (segment?.source_refs || []).forEach((ref) => {
+    const index = Number(ref);
+    if (!shownRefs.has(index)) appendReference(index);
+  });
 }
 
 function renderMessageBody(bodyEl, m, name, row) {
@@ -253,45 +323,12 @@ function renderMessageBody(bodyEl, m, name, row) {
 
   if (segments.length > 0) {
     segments.forEach((seg) => {
-      const clause = document.createElement("span");
-      clause.className = "msg-clause";
-      clause.textContent = seg.text;
-      bodyEl.appendChild(clause);
-
-      const refs = seg.source_refs || [];
-      if (refs.length > 0) {
-        refs.forEach((ref) => {
-          const src = sources[ref - 1];
-          if (!src) return;
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "cite-mark";
-          btn.textContent = `[${ref}]`;
-          btn.title = "查看這句話依據的資料";
-          btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            document
-              .querySelectorAll(".msg-row--ref-active")
-              .forEach((el) => el.classList.remove("msg-row--ref-active"));
-            row.classList.add("msg-row--ref-active");
-            fillSourcesDrawer(name, [src], {
-              highlight: `依據：${seg.text.slice(0, 80)}`,
-            });
-            openSourcesDrawer(true);
-          });
-          bodyEl.appendChild(btn);
-        });
-      } else if (seg.inference) {
-        const inf = document.createElement("span");
-        inf.className = "cite-inference";
-        inf.textContent = "［推論］";
-        bodyEl.appendChild(inf);
-      }
+      appendMessageText(bodyEl, seg.text, sources, seg, name, row);
     });
     return;
   }
 
-  bodyEl.textContent = m.content ?? "";
+  appendMessageText(bodyEl, m.content, sources, null, name, row);
 }
 
 function resetSourcesDrawerHint() {
@@ -330,15 +367,18 @@ function fillSourcesDrawer(titleName, sources, opts = {}) {
   body.appendChild(listTitle);
 
   sources.forEach((s, i) => {
+    const sourceIndex = Number(opts.sourceIndexes?.[i]) || i + 1;
     const card = document.createElement("article");
     card.className = "source-card";
+    card.dataset.sourceIndex = String(sourceIndex);
+    if (Number(opts.selectedRef) === sourceIndex) card.classList.add("source-card--target");
 
     const head = document.createElement("div");
     head.className = "source-card-head";
 
     const idx = document.createElement("span");
     idx.className = "source-index";
-    idx.textContent = String(i + 1);
+    idx.textContent = String(sourceIndex);
     head.appendChild(idx);
 
     const titles = document.createElement("div");

@@ -82,6 +82,7 @@ function scheduleInsightsLiveUpdate(immediate = true) {
 async function fetchAndRenderInsights(force = false) {
   if (!currentSessionId || insightsInFlight) return;
   insightsInFlight = true;
+  document.getElementById("mindMapUpdateStatus")?.removeAttribute("hidden");
   const refreshBtn = document.getElementById("btnInsightsRefresh");
   refreshBtn?.classList.add("spinning");
   try {
@@ -106,6 +107,7 @@ async function fetchAndRenderInsights(force = false) {
     if (mind) mind.innerHTML = `<p class="insights-empty">${escapeHtml(err.message || "無法載入圖譜")}</p>`;
   } finally {
     insightsInFlight = false;
+    document.getElementById("mindMapUpdateStatus")?.setAttribute("hidden", "");
     refreshBtn?.classList.remove("spinning");
   }
 }

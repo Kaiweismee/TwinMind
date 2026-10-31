@@ -485,10 +485,15 @@ def corpus_similarity_available() -> bool:
         conn.close()
 
 
-def format_context(results: list[dict[str, Any]], max_chars: int = 6000) -> str:
+def format_context(
+    results: list[dict[str, Any]],
+    max_chars: int = 6000,
+    *,
+    start_index: int = 1,
+) -> str:
     parts: list[str] = []
     used = 0
-    for i, r in enumerate(results, 1):
+    for i, r in enumerate(results, start_index):
         block = (
             f"[{i}] （相似度 {r['similarity']:.3f}｜{r['source_type']}｜{r['title']}）\n"
             f"{r['content']}\n"
