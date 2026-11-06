@@ -26,6 +26,12 @@ const TWIN_PRESET_LABELS = {
   company: "公司",
   custom: "自訂",
 };
+const TWIN_CREATE_PRESET_DESCRIPTIONS = {
+  life: "日常與個人目標",
+  student: "學習與專業成長",
+  company: "工作與團隊情境",
+  custom: "依需求自由設定",
+};
 const STUDENT_FIELD_IDS = [
   "createTwinStudentEducation",
   "createTwinStudentUniversity",
@@ -187,6 +193,13 @@ function refreshCreateTwinModalLayout() {
   const btnNext = document.getElementById("btnCreateTwinModalNext");
   const btnConfirm = document.getElementById("btnCreateTwinModalConfirm");
   const footer = document.querySelector("#createTwinModal .modal-footer");
+  document.querySelectorAll("#createTwinProgress [data-create-step]").forEach((item) => {
+    const itemStep = Number(item.dataset.createStep || 0);
+    item.classList.toggle("active", itemStep === createTwinModalStep);
+    item.classList.toggle("complete", itemStep < createTwinModalStep);
+    if (itemStep === createTwinModalStep) item.setAttribute("aria-current", "step");
+    else item.removeAttribute("aria-current");
+  });
   core?.classList.toggle("hidden", hideCore);
   extra?.classList.toggle("hidden", !isGuidedPreset || showProfileStep);
   step2?.classList.toggle("hidden", !isGuidedPreset || createTwinModalStep !== 2);
@@ -372,17 +385,21 @@ function updateTwinCreatePresetOptions(twins, opts = {}) {
       input.type = "radio";
       input.name = "createTwinModalPreset";
       input.value = value;
-      const span = document.createElement("span");
-      span.textContent = TWIN_PRESET_LABELS[value] || value;
       const isDisabledByUsed =
         value !== "custom" && used.has(value) && value !== forceEnabledPreset;
+      const copy = document.createElement("span");
+      copy.className = "create-twin-preset-copy";
+      const title = document.createElement("strong");
+      title.textContent = `${TWIN_PRESET_LABELS[value] || value}${isDisabledByUsed ? "（已建立）" : ""}`;
+      const description = document.createElement("small");
+      description.textContent = TWIN_CREATE_PRESET_DESCRIPTIONS[value] || "依需求設定分身";
+      copy.append(title, description);
       if (isDisabledByUsed) {
         input.disabled = true;
-        span.textContent = `${TWIN_PRESET_LABELS[value] || value}（已建立）`;
         label.classList.add("is-disabled");
       }
       label.appendChild(input);
-      label.appendChild(span);
+      label.appendChild(copy);
       modalHost.appendChild(label);
     }
     const nextPreset = Array.from(
@@ -1195,11 +1212,12 @@ function openPersonProfileModal(p) {
 
   const avatarHost = document.getElementById("personProfileAvatar");
   avatarHost.innerHTML = "";
+  const displayName = p.display_name_zh || p.name_zh || "";
   avatarHost.appendChild(
-    avatarEl(p.name_zh, "avatar lg", p.slug, p.avatar_url)
+    avatarEl(displayName, "avatar lg", p.slug, p.avatar_url)
   );
-  document.getElementById("personProfileName").textContent = p.name_zh || "";
-  document.getElementById("personProfileNameEn").textContent = p.name_en || "";
+  document.getElementById("personProfileName").textContent = displayName;
+  document.getElementById("personProfileNameEn").textContent = p.display_name_en || p.name_en || "";
 
   const metaEl = document.getElementById("personProfileMeta");
   metaEl.innerHTML = `
@@ -1208,8 +1226,14 @@ function openPersonProfileModal(p) {
       ${formatViews(p.doc_count)} 則資料
     </span>
   `;
+  if (p.avatar_source === "ai-generated-illustration") {
+    const sourceChip = document.createElement("span");
+    sourceChip.className = "profile-meta-chip";
+    sourceChip.textContent = "AI 生成示意圖";
+    metaEl.appendChild(sourceChip);
+  }
 
-  document.getElementById("personProfileBio").textContent = p.bio || "數位分身";
+  document.getElementById("personProfileBio").textContent = p.display_bio || p.bio || "數位分身";
 
   const linksEl = document.getElementById("personProfileLinks");
   linksEl.innerHTML = "";

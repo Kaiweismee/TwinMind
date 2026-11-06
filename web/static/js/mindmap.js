@@ -119,12 +119,12 @@ function getActiveMindMapForSession(sessionId, fallbackMind = {}) {
 
 /* 手繪心智圖：DOM 卡片保留完整文字，SVG 只負責連線。 */
 const MIND_MAP_BRANCH_THEMES = [
-  { ink: '#476eae', soft: '#eaf1ff', line: '#86a6d9' },
-  { ink: '#35836e', soft: '#e8f5ee', line: '#7bbba3' },
-  { ink: '#b4772f', soft: '#fff2d8', line: '#d8b274' },
-  { ink: '#a8627d', soft: '#fcecf2', line: '#d39bb1' },
-  { ink: '#8065ad', soft: '#f1ebfc', line: '#b4a0d3' },
-  { ink: '#b16b4c', soft: '#fff0e5', line: '#dbab8f' },
+  { ink: '#456fae', soft: '#edf3ff', line: '#91addb' },
+  { ink: '#3f806a', soft: '#edf6f1', line: '#91c0aa' },
+  { ink: '#a66e2e', soft: '#fff5e7', line: '#dfb879' },
+  { ink: '#a25f7a', soft: '#fbf0f4', line: '#d7a5b8' },
+  { ink: '#765fa4', soft: '#f3effa', line: '#bba9d7' },
+  { ink: '#397984', soft: '#edf6f7', line: '#91bdc3' },
 ];
 
 const mindMapCanvases = new Set();
@@ -162,7 +162,8 @@ function layoutMindMapRadial(canvas) {
   const branches = [...grid.querySelectorAll(':scope > .mind-map-paper-branch')];
   const viewportWidth = canvas.parentElement?.clientWidth || 760;
   const baseWidth = Math.max(760, viewportWidth - 36);
-  const branchWidth = Math.min(220, Math.max(170, (baseWidth - 320) / 2));
+  const leafCardWidth = Math.min(220, Math.max(170, (baseWidth - 320) / 2));
+  const leafColumnGap = 14;
   canvas.style.width = `${baseWidth}px`;
   canvas.style.height = 'auto';
   canvas.style.minHeight = '0';
@@ -171,10 +172,17 @@ function layoutMindMapRadial(canvas) {
 
   branches.forEach((branch, index) => {
     const side = index % 2 === 0 ? 'left' : 'right';
+    const leafCount = branch.querySelectorAll('.mind-map-paper-leaf').length;
+    const leafColumns = Math.min(2, Math.max(1, leafCount));
+    const branchWidth = leafColumns * leafCardWidth + (leafColumns - 1) * leafColumnGap;
     branch.dataset.flow = 'down';
-    branch.dataset.contentsLayout = 'stack';
+    branch.dataset.contentsLayout = leafColumns > 1 ? 'spread' : 'stack';
+    branch.dataset.leafColumns = String(leafColumns);
+    branch.dataset.leafCount = String(leafCount);
+    branch.dataset.centerLastLeaf = leafColumns > 1 && leafCount % 2 === 1 ? 'true' : 'false';
     branch.dataset.side = side;
     branch.style.setProperty('--branch-card-width', `${branchWidth}px`);
+    branch.style.setProperty('--mind-map-leaf-columns', String(leafColumns));
     branch.style.width = `${branchWidth}px`;
     branch.style.left = '0px';
     branch.style.top = '0px';
@@ -210,20 +218,26 @@ function layoutMindMapRadial(canvas) {
       (topIndices.length <= bottomIndices.length ? topIndices : bottomIndices).push(index);
     }
   }
+  // 各組可能是單欄或雙欄，依整排實際寬度累加位置，避免寬度不同時互相覆蓋。
+  const branchWidths = branches.map(branch => branch.offsetWidth || leafCardWidth);
+  const rowCenters = new Map();
+  for (const row of [topIndices, bottomIndices]) {
+    const rowGap = row.length === 2 ? rootWidth + 2 * gapX : gapX;
+    const rowWidth = row.reduce((sum, index) => sum + branchWidths[index], 0)
+      + Math.max(0, row.length - 1) * rowGap;
+    let cursor = -rowWidth / 2;
+    for (const index of row) {
+      rowCenters.set(index, cursor + branchWidths[index] / 2);
+      cursor += branchWidths[index] + rowGap;
+    }
+  }
   const placements = branches.map((branch, index) => {
     const isTop = topIndices.includes(index);
     const vertical = isTop ? 'top' : 'bottom';
-    const row = isTop ? topIndices : bottomIndices;
-    const rowIndex = row.indexOf(index);
-    const rowCount = row.length;
-    const width = branchWidth;
+    const width = branchWidths[index];
     const height = branchHeights[index];
     const ySign = vertical === 'top' ? -1 : 1;
-    const x = rowCount === 1
-      ? 0
-      : rowCount === 2
-        ? (rowIndex === 0 ? -1 : 1) * (rootWidth / 2 + gapX + width / 2)
-        : (rowIndex - (rowCount - 1) / 2) * (width + gapX);
+    const x = rowCenters.get(index);
     const y = ySign * (rootHeight / 2 + gapY + height / 2);
     const side = x < 0 ? 'left' : 'right';
     branch.dataset.positionRow = vertical;
@@ -530,7 +544,6 @@ function buildMindMapCanvas(mind, { animate = false, previousMind = null } = {})
   grid.style.setProperty('--map-rows', rowCount);
   const rootWrap = mindMapElement('div', 'mind-map-paper-root-wrap');
   const root = mindMapElement('div', 'mind-map-paper-root');
-  root.appendChild(mindMapElement('span', 'mind-map-paper-eyebrow', '一起想一想'));
   root.appendChild(mindMapElement('h4', 'mind-map-paper-title', mind.title || '討論主題'));
   rootWrap.appendChild(root);
   const doodle = mindMapElement('span', 'mind-map-paper-doodle', '✧');
@@ -742,6 +755,11 @@ function renderMindMap(mind, { animate = false, previousMind = null, emptyLabel 
   if (!toolbar.querySelector('.mind-map-zoom-controls')) {
     expand.remove();
     appendMindMapZoomControls(toolbar, scroll, expand);
+  }
+  const updateStatus = document.getElementById('mindMapUpdateStatus');
+  if (updateStatus && updateStatus.parentElement !== toolbar) {
+    const controls = toolbar.querySelector('.mind-map-zoom-controls');
+    toolbar.insertBefore(updateStatus, controls || expand || null);
   }
 
   const oldScroll = scroll.scrollTop;

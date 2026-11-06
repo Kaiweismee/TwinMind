@@ -50,15 +50,10 @@ async function openSession(id) {
   showChat();
   clearSourcesDrawer();
 
-  const members = currentSession.members || [];
   const title = sessionTopic(currentSession);
 
   document.getElementById("chatTitle").textContent = title;
   setDiscussSubtitle(defaultDiscussSubtitle());
-
-  const av = document.getElementById("chatAvatar");
-  av.textContent = members.length > 1 ? "多" : initials(members[0]?.name_zh || title);
-  if (members[0]) av.style.background = avatarGradient(members[0].person_slug);
 
   renderParticipantChips(currentSession);
   refreshChatReplyPicker();

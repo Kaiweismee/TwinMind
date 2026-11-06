@@ -1,13 +1,14 @@
 /* js/discover.js */
 function buildCharCard(p) {
+  const displayName = p.display_name_zh || p.name_zh || p.slug;
   const card = document.createElement("article");
   card.className = "char-card";
-  card.appendChild(avatarEl(p.name_zh, "avatar lg", p.slug, p.avatar_url));
+  card.appendChild(avatarEl(displayName, "avatar lg", p.slug, p.avatar_url));
   const body = document.createElement("div");
   body.className = "char-card-body";
   body.innerHTML = `
-    <h3>${escapeHtml(p.name_zh)}</h3>
-    <div class="char-card-bio">${escapeHtml((p.bio || "數位分身").slice(0, 120))}</div>
+    <h3>${escapeHtml(displayName)}</h3>
+    <div class="char-card-bio">${escapeHtml((p.display_bio || p.bio || "數位分身").slice(0, 120))}</div>
     <div class="char-card-stats">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       <span>${formatViews(p.doc_count)}</span>
@@ -398,19 +399,20 @@ function renderTopicRecommendTierNav() {
 }
 
 function buildTopicRecommendCard(p) {
+  const displayName = p.display_name_zh || p.name_zh || p.slug;
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "topic-recommend-card";
   if (selectedSlugs.has(p.slug)) btn.classList.add("selected");
-  btn.setAttribute("aria-label", `${p.name_zh || p.slug} ${fitTierLabel(p)}契合`);
+  btn.setAttribute("aria-label", `${displayName} ${fitTierLabel(p)}契合`);
 
   btn.appendChild(
-    avatarEl(p.name_zh, "avatar", p.slug, p.avatar_url || personAvatarUrl(p.slug))
+    avatarEl(displayName, "avatar", p.slug, p.avatar_url || personAvatarUrl(p.slug))
   );
 
   const name = document.createElement("span");
   name.className = "topic-recommend-name";
-  name.textContent = p.name_zh || p.slug;
+  name.textContent = displayName;
   btn.appendChild(name);
 
   btn.addEventListener("click", () => {
@@ -463,7 +465,8 @@ function renderTopicRecommendRows() {
 
 function scheduleTopicRecommendations() {
   if (topicRecommendTimer) clearTimeout(topicRecommendTimer);
-  topicRecommendTimer = setTimeout(() => fetchTopicRecommendations(), 280);
+  // 等輸入暫停 750 ms 再查詢，避免打字時反覆顯示載入動畫。
+  topicRecommendTimer = setTimeout(() => fetchTopicRecommendations(), 750);
 }
 
 function showTopicRecommendPlaceholder() {
@@ -584,8 +587,8 @@ function renderModalPersons() {
   const sorted = [...persons]
     .filter((p) => {
       if (!keyword) return true;
-      const zh = (p.name_zh || "").toLowerCase();
-      const en = (p.name_en || "").toLowerCase();
+      const zh = `${p.name_zh || ""} ${p.display_name_zh || ""}`.toLowerCase();
+      const en = `${p.name_en || ""} ${p.display_name_en || ""}`.toLowerCase();
       const slug = (p.slug || "").toLowerCase();
       return zh.includes(keyword) || en.includes(keyword) || slug.includes(keyword);
     })
@@ -600,7 +603,9 @@ function renderModalPersons() {
     }
     if (fa) return -1;
     if (fb) return 1;
-    return (a.name_zh || "").localeCompare(b.name_zh || "");
+    return (a.display_name_zh || a.name_zh || "").localeCompare(
+      b.display_name_zh || b.name_zh || ""
+    );
   });
   if (!sorted.length) {
     list.innerHTML = '<p class="empty">找不到符合的名人</p>';
@@ -637,9 +642,10 @@ function renderModalPersons() {
     const head = document.createElement("div");
     head.className = "modal-person-head";
 
+    const displayName = p.display_name_zh || p.name_zh || p.slug;
     const name = document.createElement("span");
     name.className = "modal-person-name";
-    name.textContent = p.name_zh || p.slug;
+    name.textContent = displayName;
     head.appendChild(name);
 
     if (fit?.fit_tier === "high") {
@@ -651,13 +657,13 @@ function renderModalPersons() {
 
     const sub = document.createElement("span");
     sub.className = "modal-person-en";
-    sub.textContent = p.name_en || "";
+    sub.textContent = p.display_name_en || p.name_en || "";
 
     info.appendChild(head);
-    if (p.name_en) info.appendChild(sub);
+    if (p.display_name_en || p.name_en) info.appendChild(sub);
 
     row.appendChild(checkWrap);
-    row.appendChild(avatarEl(p.name_zh, "avatar sm", p.slug, p.avatar_url));
+    row.appendChild(avatarEl(displayName, "avatar sm", p.slug, p.avatar_url));
     row.appendChild(info);
     list.appendChild(row);
   }

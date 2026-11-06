@@ -226,18 +226,23 @@ def main() -> None:
 
             if args.slug:
                 cur.execute(
-                    "SELECT id, slug, name_en, name_zh FROM persons WHERE slug = %s;",
+                    "SELECT id, slug, name_en, name_zh, avatar_source "
+                    "FROM persons WHERE slug = %s;",
                     (args.slug,),
                 )
             else:
                 cur.execute(
-                    "SELECT id, slug, name_en, name_zh FROM persons ORDER BY name_zh;"
+                    "SELECT id, slug, name_en, name_zh, avatar_source "
+                    "FROM persons ORDER BY name_zh;"
                 )
             rows = cur.fetchall()
 
         print(f"共 {len(rows)} 位名人\n")
 
         for person in rows:
+            if person.get("avatar_source") == "ai-generated-illustration":
+                print(f"略過 {person['slug']}：保留專案內的 AI 生成頭像")
+                continue
             result = process_person(sess, dict(person), dry_run=args.dry_run)
             if not result:
                 fail += 1

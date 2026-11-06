@@ -317,9 +317,32 @@ function appendMessageText(bodyEl, text, sources, segment, name, row) {
   });
 }
 
+function visibleConclusionText(text) {
+  let skipping = false;
+  const visible = [];
+  for (const line of String(text || "").split(/\r?\n/)) {
+    const heading = line.trim().replace(/^#{1,6}\s*/, "").replace(/\*\*|__/g, "");
+    if (/^待釐清問題\s*(?:[：:]|$)/.test(heading)) {
+      skipping = true;
+      continue;
+    }
+    if (skipping && (/^#{1,6}\s+/.test(line.trim()) || /^(共識|分歧|建議)\s*(?:[：:]|$)/.test(heading))) {
+      skipping = false;
+    }
+    if (!skipping) visible.push(line);
+  }
+  return visible.join("\n").trim();
+}
+
 function renderMessageBody(bodyEl, m, name, row) {
   const { sources, segments } = messagePayload(m);
   bodyEl.innerHTML = "";
+
+  if (isConclusionMessage(m)) {
+    const text = m.content || segments.map(seg => seg.text || "").join("");
+    appendMessageText(bodyEl, visibleConclusionText(text), sources, null, name, row);
+    return;
+  }
 
   if (segments.length > 0) {
     segments.forEach((seg) => {

@@ -42,7 +42,8 @@ def _llm() -> LLM:
     # OPENAI_API_KEY 由 .env 載入至環境變數
     return LLM(
         model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-        temperature=0.7,
+        # gpt-6-luna only accepts the default sampling temperature (1).
+        temperature=1,
     )
 
 

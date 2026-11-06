@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 import psycopg2
@@ -364,3 +365,81 @@ def search_user_context(
             }
         )
     return context, chunk_ids, sources
+
+
+def innoserve_opening_sources(user_id: int, session_id: int) -> list[dict[str, Any]]:
+    """開場直接讀取本聊天室 PDF 頁面，避免預覽截斷或向量排名漏掉評分表。"""
+    from pathlib import Path
+    import pdfplumber
+    from web.conversations.twin_chat import get_upload_path
+
+    conn = _conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT context_files FROM chat_sessions WHERE id = %s AND owner_user_id = %s",
+                (session_id, user_id),
+            )
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return []
+
+    selected: dict[str, dict[str, Any]] = {}
+    for attachment in row.get("context_files") or []:
+        name = str(attachment.get("name") or "")
+        stored = str(attachment.get("stored_name") or "")
+        if not stored or Path(stored).name != stored or Path(stored).suffix.lower() != ".pdf":
+            continue
+        project = "分身有術" in name
+        rules = "競賽須知" in name or ("innoserve" in name.casefold() and "須知" in name)
+        if not project and not rules:
+            continue
+        path = get_upload_path(user_id, stored)
+        if not path:
+            continue
+        with pdfplumber.open(path) as pdf:
+            pages = [page.extract_text() or "" for page in pdf.pages]
+
+        def add_source(kind: str, first: int, last: int, content: str) -> None:
+            if kind in selected:
+                return
+            page_label = str(first + 1) if first == last else f"{first + 1}–{last + 1}"
+            selected[kind] = {
+                "title": f"{name} · 第 {page_label} 頁",
+                "source_type": "session_context",
+                "source_url": f"/api/twin-chat/files/{user_id}/{stored}#page={first + 1}",
+                "content": content.strip(),
+                "reference_kind": kind,
+            }
+
+        if project:
+            for kind, terms in (
+                ("project_intro", ("研究背景與動機", "決策盲點")),
+                ("project_audience", ("目標族群", "新創團隊", "自學")),
+                ("project_features", ("客製化", "個人數位分身", "視覺化討論")),
+                ("project_citations", ("句子末端", "參考資料", "點擊")),
+            ):
+                for index, content in enumerate(pages):
+                    compact = re.sub(r"\s+", "", content)
+                    if all(term in compact for term in terms):
+                        add_source(kind, index, index, content)
+                        break
+        if rules:
+            for index, content in enumerate(pages):
+                compact = re.sub(r"\s+", "", content)
+                if "(五)決賽評分項目" not in compact or "資訊應用組" not in compact:
+                    continue
+                # 資訊應用組表格跨頁；取下一組開始前的表格，避免混入其他組別權重。
+                excerpt = content[content.index("決賽評分項目"):]
+                last = min(index + 1, len(pages) - 1)
+                if last != index:
+                    excerpt += "\n" + pages[last]
+                end = re.search(r"說明展示表達能力\s*10\s*%", excerpt)
+                if end:
+                    add_source("competition_scoring", index, last, excerpt[:end.end()])
+                break
+    return [selected[kind] for kind in (
+        "project_intro", "project_audience", "project_features", "project_citations", "competition_scoring"
+    ) if kind in selected]

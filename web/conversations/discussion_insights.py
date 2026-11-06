@@ -469,9 +469,42 @@ _REPLACE_TOPIC_THEME_BUCKETS: list[tuple[str, list[str]]] = [
     ("治理與教育轉型", ["治理", "監管", "法規", "教育", "課程", "培訓", "轉型"]),
 ]
 
+_INNOSERVE_DEMO_THEME_BUCKETS: list[tuple[str, list[str]]] = [
+    (
+        "檢索引用與可信度",
+        ["檢索", "引用", "來源", "參考資料", "可信", "查證", "可追", "資料不足"],
+    ),
+    (
+        "公平呈現與視覺化",
+        ["公平", "平衡", "立場", "觀點", "視覺化", "心智圖", "偏見", "角色", "發言"],
+    ),
+    (
+        "決策流程與完整系統演練",
+        ["流程", "系統演練", "完整系統", "情境", "展示", "demo", "決策", "操作", "實際"],
+    ),
+    (
+        "使用者需求與產品價值",
+        ["使用者", "需求", "痛點", "產品", "價值", "客戶", "效益"],
+    ),
+    (
+        "成效驗證與展示溝通",
+        ["驗證", "測試", "指標", "成效", "海報", "簡報", "評審", "溝通"],
+    ),
+]
+
+
+def _is_innoserve_award_topic(topic: str) -> bool:
+    normalized = re.sub(r"[\W_]+", "", (topic or "").casefold())
+    has_award_intent = any(
+        word in normalized for word in ("得名", "得獎", "獲獎", "獲名次", "拿名次")
+    )
+    return any(name in normalized for name in ("innoserve", "分身有術")) and has_award_intent
+
 
 def _theme_buckets_for_topic(topic: str) -> list[tuple[str, list[str]]]:
     t = topic or ""
+    if _is_innoserve_award_topic(t):
+        return _INNOSERVE_DEMO_THEME_BUCKETS
     if any(k in t for k in ("取代", "人類", "替代", "失業")):
         return _REPLACE_TOPIC_THEME_BUCKETS
     return _MIND_MAP_THEME_BUCKETS
@@ -563,10 +596,12 @@ def _mind_map_leaf(
     content: str,
     topic: str = "",
 ) -> dict[str, Any]:
-    quote_full = _message_highlight(content, 110, topic)
-    quote_short = _compact_point(quote_full or content, topic=topic, max_len=24)
+    is_innoserve_demo = _is_innoserve_award_topic(topic)
+    quote_full = _message_highlight(content, 150 if is_innoserve_demo else 110, topic)
+    display_len = 45
+    quote_short = _compact_point(quote_full or content, topic=topic, max_len=display_len)
     if not quote_short and quote_full:
-        quote_short = _compact_point(quote_full, topic=topic, max_len=24)
+        quote_short = _compact_point(quote_full, topic=topic, max_len=display_len)
     if not quote_full:
         quote_full = quote_short
     return {
@@ -652,7 +687,7 @@ def _assign_mind_map_leaves(
     將每位名人的「句子」分配到最相關的子議題；每句全域只用一次。
     回傳 theme_label -> [(slug, name, sentence), ...]
     """
-    themes = [label for label, _ in _theme_buckets_for_topic(topic)[:4]]
+    themes = [label for label, _ in _theme_buckets_for_topic(topic)]
     result: dict[str, list[tuple[str, str, str]]] = {t: [] for t in themes}
     used: set[str] = set()
     score_floor = _TOPIC_MIN_SCORE if min_score is None else float(min_score)
@@ -723,13 +758,19 @@ def _build_mind_map_children(
     lines: list[dict[str, str]],
     members: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """中心主題 → 四個子議題 → 各名人與該議題相關的一句話（跨分支不重複）。"""
+    """中心主題 → 有實質內容的子議題 → 各名人相關觀點（跨分支不重複）。"""
     celebs = _discussion_celebrities(members, lines)
     if not celebs:
         return []
 
-    themes = [label for label, _ in _theme_buckets_for_topic(topic)[:4]]
-    assigned = _assign_mind_map_leaves(topic, lines, celebs)
+    themes = [label for label, _ in _theme_buckets_for_topic(topic)]
+    is_innoserve_demo = _is_innoserve_award_topic(topic)
+    assigned = _assign_mind_map_leaves(
+        topic,
+        lines,
+        celebs,
+        max_theme_per_speaker=len(themes) if is_innoserve_demo else None,
+    )
     children: list[dict[str, Any]] = []
     for theme_label in themes:
         leaves: list[dict[str, Any]] = []
@@ -1148,8 +1189,26 @@ def generate_insights(
     member_desc = "、".join(
         f"{m.get('name_zh')}({m.get('person_slug')})" for m in members
     )
+    is_innoserve_demo = _is_innoserve_award_topic(topic)
+    transcript_limit = 60 if is_innoserve_demo else 40
     transcript = "\n".join(
-        f"[{l['phase']}] {l['speaker']}: {l['content']}" for l in lines[-40:]
+        f"[{l['phase']}] {l['speaker']}: {l['content']}"
+        for l in lines[-transcript_limit:]
+    )
+    mind_map_quote_length = "30-50"
+
+    innoserve_mind_map_rules = (
+        "- 本場 InnoServe 心智圖以「檢索引用與可信度」、「公平呈現與視覺化」、"
+        "「決策流程與完整系統演練」作為起始方向，不限制只能三個議題。"
+        "若實際發言另談到使用者需求、產品價值、成效驗證、簡報或海報溝通等獨立主張，建立相應新議題；"
+        "內容充足時可整理 4～8 個不同議題，沒有內容的分類先不要畫出來，不為湊數拆分近義議題。\n"
+        "- 決策流程議題優先整理發言中的判斷方法與使用價值；只有實際對話提到完整系統演練時才收錄其操作建議，合併重複流程，不替每位名人補上 Demo 建議。\n"
+        "- 優先整理名人在個人資料引用中提到的專業知識、原則、研究內容或具體例證；比賽規章與專題內容只在發言確實談到時才納入。\n"
+        "- 發言若明確將建議連結到資訊應用組評分項目，摘要保留該關聯；只沿用紀錄中的項目與權重，不新增評分、不強制建立六個分類。\n"
+        "- 每個分身的內容要統整成可展示的建議，勿照抄整段聊天室發言；同一名人可以出現在多個相關議題，"
+        "每個議題下若有兩項不同的實質主張，可分成兩張觀點卡；相同或近義觀點合併，保留先前仍有效的觀點。\n"
+        if _is_innoserve_award_topic(topic)
+        else ""
     )
 
     system = (
@@ -1172,7 +1231,7 @@ def generate_insights(
         "children": [
           {{
             "label": "該名人對此議題整理後的核心重點",
-            "quote": "以 18-40 字統整主張與理由／影響",
+            "quote": "以 {mind_map_quote_length} 字白話說明核心觀點，再補充一個具體做法、理由或影響",
             "speaker": "中文名",
             "person_slug": "slug"
           }}
@@ -1201,15 +1260,21 @@ def generate_insights(
 規則：
 - mind_map 結構：中心 title=討論主題 → 第二層=依對話內容自行歸納的議題 → 第三層=各名人在該議題下整理後的重點
 - 議題數量由內容決定；輸出所有清楚且彼此不同的議題，通常 2-8 個，內容尚少時可少於 2 個；不可湊固定數量，不可加入沒有實際觀點的分類
-- 議題名稱貼合本場討論，允許使用全新的分類；不要把近義議題拆開湊數
+{innoserve_mind_map_rules}- 議題名稱貼合本場討論，允許使用全新的分類；不要把近義議題拆開湊數
 - 禁止用「開場／辯論／總結」或流程階段當第二層；禁止把名人姓名當第二層
-- 每個葉節點含 speaker、person_slug、quote（或 label）；以 18-40 字統整名人在此議題下的主張與理由／影響
+- 每個葉節點含 speaker、person_slug、quote（或 label）；quote 約 {mind_map_quote_length} 字，最多 60 字，以一到兩個白話短句說明同一個核心觀點；label 與 quote 使用相同摘要
 - quote 必須是摘要而非逐字摘錄：不要照抄原句、不要使用引號或第一人稱；忠於發言，不加入對話未提及的事實
+- 用一般人一眼能懂的日常用語，優先說清楚「要做什麼」或「主要看法」；避免抽象名詞堆疊、術語與縮寫，需要時換成簡單說法
+- 每張卡先說主要看法，再從發言中補充一個具體做法、理由、例子或影響，讓讀者知道為什麼或怎麼做；避免只剩空泛口號。原發言沒有細節時保持簡短，不為湊字數編造理由
+- 不必同時塞入主張、例證、理由與影響，不列多項清單、不重複議題名稱。句子太長時重新改寫，不用省略號或截斷句子湊字數
+- 保留會改變立場的否定、條件與不確定性，例如「可能」「先驗證再擴大」「尚未證實」；不可為縮短而把建議寫成事實或把未知寫成確定
 - 只收錄確實談及該議題的名人；不可在多個議題重複相同重點
 - quote／highlights 必須是實質論點（立場、理由、影響、建議），禁止「哈囉大家好」「很高興參與」等寒暄開場
+- 不把 AI 身分、真人背書、得名機率或全面公平等制式聲明列為心智圖觀點或 highlights；保留對具體問題的驗證方法與有依據的限制
+- 不摘錄「個人資料未證明能得名」「未提供本作品的成效測試、壓力測試或迭代紀錄」這類附帶聲明；若同段有具體測試做法或改進建議，只整理該做法。不得因此把未知效果改寫成已驗證的成果
 - quote / highlights 不要以「我同意某某」「謝謝某某」開頭，請直接寫該名人的自身立場與理由
-- quote / highlights 僅保留「主張 + 理由/影響」句型，避免只有回應語氣或純社交用語
-- 跨每位名人的相關發言統整成一個清楚重點，不要只取第一句或最長的一句
+- quote 與 highlights 保留核心主張及一項有依據的補充說明，避免只有回應語氣或純社交用語
+- 跨每位名人的相關發言整理不同主張，不要只取第一句或最長的一句；同一議題下每位名人最多兩個不同重點，每張卡只講一個重點
 - stance_chart 至少 2 個 step，scores 的 key 必須用 person_slug
 - 分數 0=最保守，100=最積極；若立場相近，分數應接近（前端會重疊頭像）
 """

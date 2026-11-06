@@ -11,7 +11,10 @@ CREATE TABLE IF NOT EXISTS persons (
     slug        TEXT NOT NULL UNIQUE,          -- 程式用識別，例如 elon_musk
     name_zh     TEXT NOT NULL,                 -- 黃仁勳
     name_en     TEXT NOT NULL,                 -- Jensen Huang
+    display_name_zh TEXT,                      -- UI 顯示別名
+    display_name_en TEXT,                      -- UI 顯示英文別名
     bio         TEXT,                          -- 簡短介紹（可選）
+    display_bio TEXT,                          -- 將姓名換成顯示別名的簡介
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

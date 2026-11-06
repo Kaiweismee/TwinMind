@@ -343,6 +343,7 @@ document.addEventListener("click", (e) => {
 });
 
 document.getElementById("createTwinModalForm")?.addEventListener("submit", submitCreateTwinModal);
+document.getElementById("createTwinModalClose")?.addEventListener("click", closeCreateTwinModal);
 document.getElementById("createTwinModal")?.addEventListener("click", (e) => {
   if (e.target.id === "createTwinModal") closeCreateTwinModal();
 });

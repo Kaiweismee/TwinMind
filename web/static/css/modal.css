@@ -1446,3 +1446,533 @@
   border: 1px solid #fca5a5;
 }
 
+/* 建立數位分身：清楚的步驟、寬敞的欄位與固定操作列 */
+#createTwinModal {
+  padding: 20px;
+  background: rgba(18, 25, 43, 0.42);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#createTwinModal .modal.modal--create-twin {
+  width: min(760px, 94vw);
+  max-height: min(90vh, 900px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 24px;
+  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.24);
+}
+#createTwinModal .create-twin-modal-header {
+  position: relative;
+  display: block;
+  padding: 24px 28px 0;
+  border-bottom: 0;
+  background:
+    radial-gradient(ellipse at 4% 0%, rgba(99, 102, 241, 0.12), transparent 48%),
+    linear-gradient(180deg, #fbfbff 0%, #fff 100%);
+}
+.create-twin-modal-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-right: 44px;
+}
+.create-twin-modal-mark {
+  display: inline-flex;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5;
+  border: 1px solid #e0e7ff;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #eef2ff, #fff);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.1);
+}
+.create-twin-modal-mark svg { width: 27px; height: 27px; }
+.create-twin-modal-eyebrow {
+  margin: 0 0 3px;
+  color: #6366f1;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+.create-twin-modal-heading h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+#createTwinModal .create-twin-modal-heading .modal-hint {
+  margin: 5px 0 0;
+  color: #7b8497;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.create-twin-modal-close {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #7b8497;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.create-twin-modal-close:hover {
+  color: #312e81;
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  transform: rotate(4deg);
+}
+.create-twin-modal-close svg { width: 17px; height: 17px; }
+.create-twin-progress {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 23px;
+  padding: 0 0 17px;
+}
+.create-twin-progress-step {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: #a0a7b5;
+  font-size: 0.77rem;
+  font-weight: 650;
+}
+.create-twin-progress-step:not(:last-child)::after {
+  position: absolute;
+  top: 50%;
+  left: 34px;
+  right: 12px;
+  height: 1px;
+  background: #e5e7eb;
+  content: "";
+  transform: translateY(-50%);
+}
+.create-twin-progress-step > span {
+  z-index: 1;
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e1e5ed;
+  border-radius: 50%;
+  background: #fff;
+  color: #8b93a4;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+.create-twin-progress-step b {
+  z-index: 1;
+  overflow: hidden;
+  background: #fbfbff;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.create-twin-progress-step.active { color: #4338ca; }
+.create-twin-progress-step.active > span,
+.create-twin-progress-step.complete > span {
+  border-color: #6366f1;
+  background: #4f46e5;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+.create-twin-progress-step.complete { color: #596174; }
+#createTwinModalForm {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+.create-twin-modal-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 4px 28px 18px;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+#createTwinModalCoreFields {
+  margin: 4px 0 16px;
+  padding: 4px 16px 8px;
+  border: 1px solid #e8eaf2;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fafbff, #fff 72%);
+}
+#createTwinModal .modal-topic-wrap {
+  padding: 14px 0;
+  border-bottom: 1px solid #eceef4;
+}
+#createTwinModal .modal-topic-wrap:last-child { border-bottom: 0; }
+#createTwinModal .modal-topic-wrap > label {
+  margin-bottom: 8px;
+  color: #394258;
+  font-size: 0.83rem;
+  font-weight: 750;
+}
+#createTwinModal .modal-topic-wrap input,
+#createTwinModal .modal-topic-wrap select,
+#createTwinModal .modal-topic-wrap textarea,
+#createTwinModal .create-twin-student-grid input,
+#createTwinModal .create-twin-company-grid input,
+#createTwinModal .create-twin-life-grid input,
+#createTwinModal .create-twin-custom-grid input,
+#createTwinModal .create-twin-student-grid select,
+#createTwinModal .create-twin-company-grid select,
+#createTwinModal .create-twin-life-grid select,
+#createTwinModal .create-twin-custom-grid select {
+  min-height: 44px;
+  border: 1px solid #dfe3ec;
+  border-radius: 11px;
+  background-color: #fff;
+  color: #1f2937;
+  font: inherit;
+  font-size: 0.91rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#createTwinModal .modal-topic-wrap input,
+#createTwinModal .modal-topic-wrap select,
+#createTwinModal .modal-topic-wrap textarea,
+#createTwinModal .create-twin-student-grid input,
+#createTwinModal .create-twin-company-grid input,
+#createTwinModal .create-twin-life-grid input,
+#createTwinModal .create-twin-custom-grid input,
+#createTwinModal .create-twin-student-grid select,
+#createTwinModal .create-twin-company-grid select,
+#createTwinModal .create-twin-life-grid select,
+#createTwinModal .create-twin-custom-grid select { padding: 10px 12px; }
+#createTwinModal .modal-topic-wrap input:focus,
+#createTwinModal .modal-topic-wrap select:focus,
+#createTwinModal .modal-topic-wrap textarea:focus,
+#createTwinModal .create-twin-student-grid input:focus,
+#createTwinModal .create-twin-company-grid input:focus,
+#createTwinModal .create-twin-life-grid input:focus,
+#createTwinModal .create-twin-custom-grid input:focus,
+#createTwinModal .create-twin-student-grid select:focus,
+#createTwinModal .create-twin-company-grid select:focus,
+#createTwinModal .create-twin-life-grid select:focus,
+#createTwinModal .create-twin-custom-grid select:focus {
+  outline: none;
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+.create-twin-field-hint {
+  display: block;
+  margin-top: 7px;
+  color: #8a92a3;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+#createTwinModal .register-preset-picker {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+#createTwinModal .register-preset-option {
+  min-height: 76px;
+  justify-content: flex-start;
+  padding: 11px 12px;
+  border-color: #e4e7ef;
+  border-radius: 13px;
+  text-align: left;
+  transition: transform 0.16s, border-color 0.16s, box-shadow 0.16s, background 0.16s;
+}
+#createTwinModal .register-preset-option:hover:not(.is-disabled) {
+  transform: translateY(-2px);
+  border-color: #c7d2fe;
+  box-shadow: 0 8px 18px rgba(35, 45, 85, 0.07);
+}
+#createTwinModal .register-preset-option:has(input:checked) {
+  border-color: #818cf8;
+  background: linear-gradient(145deg, #eef2ff, #fff);
+  color: #4338ca;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+#createTwinModal .register-preset-option.is-disabled .create-twin-preset-copy strong { color: #9ca3af; }
+#createTwinModal .register-preset-option.is-disabled .create-twin-preset-copy small { color: #b0b6c2; }
+.create-twin-preset-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+.create-twin-preset-copy strong {
+  color: #2d3548;
+  font-size: 0.88rem;
+  line-height: 1.2;
+}
+.create-twin-preset-copy small {
+  color: #8991a2;
+  font-size: 0.67rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+#createTwinModal .register-preset-option:has(input:checked) .create-twin-preset-copy strong { color: #4338ca; }
+#createTwinModal #createTwinStudentFields,
+#createTwinModal #createTwinCompanyFields,
+#createTwinModal #createTwinLifeFields,
+#createTwinModal #createTwinCustomFields {
+  margin: 0 0 16px;
+  padding: 15px 16px 17px;
+  border: 1px solid #e8eaf2;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(25, 35, 62, 0.035);
+}
+#createTwinModal .create-twin-style-head {
+  padding: 12px 2px 15px;
+  align-items: center;
+}
+#createTwinModal .create-twin-style-step {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border: 0;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 0.83rem;
+  font-weight: 800;
+}
+#createTwinModal .create-twin-style-title-wrap h3 { color: #202a40; font-size: 1.12rem; }
+#createTwinModal .create-twin-style-title-wrap p { color: #838b9b; font-size: 0.8rem; line-height: 1.5; }
+#createTwinModal .create-twin-style-card,
+#createTwinModal .create-twin-upload-card {
+  margin: 0 0 16px;
+  padding: 16px;
+  border-color: #e6e9f1;
+  border-radius: 17px;
+  background: #fafbfe;
+}
+#createTwinModal .create-twin-style-card { gap: 11px; }
+#createTwinModal .create-twin-style-question {
+  padding: 13px;
+  border-color: #e9ebf2;
+  border-radius: 13px;
+  box-shadow: 0 2px 6px rgba(30, 41, 59, 0.025);
+}
+#createTwinModal .create-twin-style-question p { color: #333d53; font-size: 0.88rem; }
+#createTwinModal .create-twin-style-option {
+  min-height: 44px;
+  border-color: #e3e6ee;
+  border-radius: 11px;
+  color: #566074;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-align: left;
+}
+#createTwinModal .create-twin-style-option:hover { border-color: #a5b4fc; background: #f8f9ff; }
+#createTwinModal .create-twin-style-option.active {
+  border-color: #818cf8;
+  background: #eef2ff;
+  color: #4338ca;
+  box-shadow: inset 0 0 0 1px #818cf8;
+}
+#createTwinModal .create-twin-upload-card { min-height: 0 !important; }
+#createTwinModal .create-twin-upload-label { color: #394258; font-size: 0.86rem; }
+#createTwinModal .create-twin-upload-tag {
+  border-color: #e1e5ed;
+  color: #697386;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+#createTwinModal .create-twin-upload-tag:hover { border-color: #a5b4fc; color: #4f46e5; }
+#createTwinModal .create-twin-upload-tag.active {
+  border-color: #a5b4fc;
+  background: #eef2ff;
+  color: #4338ca;
+}
+#createTwinModal .create-twin-upload-drop {
+  min-height: 150px !important;
+  padding: 24px 16px;
+  border-color: #c7d2fe;
+  background: #fff;
+  color: #4f46e5;
+}
+#createTwinModal .create-twin-upload-drop:hover { background: #f8f9ff; border-color: #818cf8; }
+#createTwinModal .create-twin-upload-drop span { font-size: 0.9rem; font-weight: 700; }
+#createTwinModal .create-twin-upload-drop small { color: #8991a2; }
+#createTwinModal .create-twin-upload-note { color: #7f8798; }
+#createTwinModal .modal-footer {
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 14px 28px 20px;
+  border-top: 1px solid #eceef4;
+  background: rgba(255, 255, 255, 0.96);
+}
+#createTwinModal .modal-footer .btn-primary {
+  min-height: 44px;
+  padding: 11px 22px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  box-shadow: 0 7px 16px rgba(79, 70, 229, 0.2);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+#createTwinModal .modal-footer .btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.25);
+}
+#createTwinModal .modal-footer .btn-secondary {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid #e1e5ed;
+  border-radius: 12px;
+  background: #fff;
+  color: #596174;
+  font-weight: 650;
+  cursor: pointer;
+}
+#createTwinModal .modal-footer .btn-secondary:hover { background: #f8f9fc; border-color: #cfd5e1; }
+#createTwinModalError { margin: 0 28px 8px; }
+
+@media (max-width: 640px) {
+  #createTwinModal { padding: 10px; }
+  #createTwinModal .modal.modal--create-twin { width: 100%; max-height: 94vh; border-radius: 20px; }
+  #createTwinModal .create-twin-modal-header { padding: 19px 18px 0; }
+  .create-twin-modal-mark { width: 44px; height: 44px; flex-basis: 44px; border-radius: 14px; }
+  .create-twin-modal-heading { gap: 12px; padding-right: 34px; }
+  .create-twin-modal-heading h2 { font-size: 1.2rem; }
+  #createTwinModal .create-twin-modal-heading .modal-hint { font-size: 0.76rem; }
+  .create-twin-modal-close { top: 16px; right: 16px; width: 32px; height: 32px; }
+  .create-twin-progress { margin-top: 18px; padding-bottom: 14px; }
+  .create-twin-progress-step { justify-content: center; gap: 4px; font-size: 0.63rem; }
+  .create-twin-progress-step:not(:last-child)::after { left: calc(50% + 17px); right: -4px; }
+  .create-twin-progress-step > span { width: 24px; height: 24px; flex-basis: 24px; font-size: 0.58rem; }
+  .create-twin-progress-step b { max-width: 62px; font-size: 0.62rem; }
+  .create-twin-modal-scroll { padding: 2px 17px 14px; }
+  #createTwinModalCoreFields { padding: 2px 12px 6px; border-radius: 15px; }
+  #createTwinModal .register-preset-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #createTwinModal .register-preset-option { min-height: 64px; }
+  #createTwinModal .create-twin-style-options { grid-template-columns: 1fr; }
+  #createTwinModal .modal-footer { padding: 12px 17px 16px; }
+}
+
+/* 保留網站原有的白灰介面，降低紫色與漸層的存在感 */
+#createTwinModal {
+  background: rgba(31, 41, 55, 0.34);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+#createTwinModal .modal.modal--create-twin {
+  border-color: #e5e7eb;
+  border-radius: 18px;
+  box-shadow: 0 18px 56px rgba(17, 24, 39, 0.16);
+}
+#createTwinModal .create-twin-modal-header {
+  background: #fff;
+}
+.create-twin-modal-mark {
+  color: #4b5563;
+  border-color: #e5e7eb;
+  border-radius: 14px;
+  background: #f3f4f6;
+  box-shadow: none;
+}
+.create-twin-modal-eyebrow {
+  color: #9ca3af;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+.create-twin-modal-heading h2 { color: #1f2937; }
+#createTwinModal .create-twin-modal-heading .modal-hint { color: #6b7280; }
+.create-twin-modal-close:hover {
+  color: #374151;
+  border-color: #d1d5db;
+  background: #f3f4f6;
+  transform: none;
+}
+.create-twin-progress-step.active { color: #374151; }
+.create-twin-progress-step.active > span,
+.create-twin-progress-step.complete > span {
+  border-color: #6b7280;
+  background: #4b5563;
+  box-shadow: none;
+}
+.create-twin-progress-step b { background: #fff; }
+#createTwinModalCoreFields {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+}
+#createTwinModal .modal-topic-wrap > label,
+#createTwinModal .create-twin-upload-label { color: #374151; }
+#createTwinModal .modal-topic-wrap input:focus,
+#createTwinModal .modal-topic-wrap select:focus,
+#createTwinModal .modal-topic-wrap textarea:focus,
+#createTwinModal .create-twin-student-grid input:focus,
+#createTwinModal .create-twin-company-grid input:focus,
+#createTwinModal .create-twin-life-grid input:focus,
+#createTwinModal .create-twin-custom-grid input:focus,
+#createTwinModal .create-twin-student-grid select:focus,
+#createTwinModal .create-twin-company-grid select:focus,
+#createTwinModal .create-twin-life-grid select:focus,
+#createTwinModal .create-twin-custom-grid select:focus {
+  border-color: #9ca3af;
+  box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.12);
+}
+#createTwinModal .register-preset-option:hover:not(.is-disabled) {
+  border-color: #cbd0d8;
+  box-shadow: 0 5px 12px rgba(31, 41, 55, 0.06);
+}
+#createTwinModal .register-preset-option:has(input:checked) {
+  border-color: #9ca3af;
+  background: #f3f4f6;
+  color: #374151;
+  box-shadow: inset 0 0 0 1px #9ca3af;
+}
+.create-twin-preset-copy strong,
+#createTwinModal .register-preset-option:has(input:checked) .create-twin-preset-copy strong { color: #374151; }
+.create-twin-preset-copy small { color: #858b95; }
+#createTwinModal .create-twin-style-step {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+#createTwinModal .create-twin-style-title-wrap h3,
+#createTwinModal .create-twin-style-question p { color: #252b34; }
+#createTwinModal .create-twin-style-card,
+#createTwinModal .create-twin-upload-card { background: #f9fafb; }
+#createTwinModal .create-twin-style-option:hover {
+  border-color: #c5cad2;
+  background: #f9fafb;
+}
+#createTwinModal .create-twin-style-option.active {
+  border-color: #9ca3af;
+  background: #f3f4f6;
+  color: #374151;
+  box-shadow: inset 0 0 0 1px #9ca3af;
+}
+#createTwinModal .create-twin-upload-tag:hover { border-color: #c5cad2; color: #374151; }
+#createTwinModal .create-twin-upload-tag.active {
+  border-color: #9ca3af;
+  background: #f3f4f6;
+  color: #374151;
+}
+#createTwinModal .create-twin-upload-drop {
+  border-color: #cbd0d8;
+  color: #4b5563;
+}
+#createTwinModal .create-twin-upload-drop:hover {
+  border-color: #9ca3af;
+  background: #f9fafb;
+}
+#createTwinModal .modal-footer .btn-primary {
+  background: #374151;
+  box-shadow: 0 4px 10px rgba(31, 41, 55, 0.13);
+}
+#createTwinModal .modal-footer .btn-primary:hover:not(:disabled) {
+  background: #1f2937;
+  box-shadow: 0 6px 14px rgba(31, 41, 55, 0.18);
+}
+#createTwinModal .modal-footer .btn-secondary:hover { background: #f3f4f6; }
+

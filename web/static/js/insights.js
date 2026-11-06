@@ -104,7 +104,18 @@ async function fetchAndRenderInsights(force = false) {
     lastInsightsMsgCount = nextMessageCount;
   } catch (err) {
     const mind = document.getElementById("mindMapHost");
-    if (mind) mind.innerHTML = `<p class="insights-empty">${escapeHtml(err.message || "無法載入圖譜")}</p>`;
+    const scroll = mind?.querySelector(".mind-map-paper-scroll");
+    if (scroll) {
+      const error = document.createElement("p");
+      error.className = "insights-empty";
+      error.textContent = err.message || "無法載入圖譜";
+      scroll.replaceChildren(error);
+    } else if (mind) {
+      const error = document.createElement("p");
+      error.className = "insights-empty";
+      error.textContent = err.message || "無法載入圖譜";
+      mind.appendChild(error);
+    }
   } finally {
     insightsInFlight = false;
     document.getElementById("mindMapUpdateStatus")?.setAttribute("hidden", "");

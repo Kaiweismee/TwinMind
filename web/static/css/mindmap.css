@@ -215,3 +215,173 @@ body.mind-map-expanded-open .insights-section--mindmap { display: none; }
   .mind-map-tool { transition: none; }
   .mind-map-draw-in, .mind-map-thread-layer path.mind-map-thread-drawing { animation: none; opacity: 1; translate: none; scale: 1; stroke-dashoffset: 0; }
 }
+
+/* 保持純白畫布，使用柔和但可辨識的議題色。 */
+.mind-map-host {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+}
+.mind-map-paper-toolbar {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+.mind-map-paper-count,
+.mind-map-zoom-level { color: var(--text-secondary); }
+.mind-map-paper-toolbar .mind-map-update-status {
+  flex: 0 0 24px;
+  width: 24px;
+  min-height: 24px;
+  margin: 0 auto 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.mind-map-paper-toolbar .mind-map-update-status[hidden] { display: none; }
+.mind-map-paper-toolbar .mind-map-update-gear { width: 18px; height: 18px; }
+.mind-map-tool,
+.mind-map-zoom-button {
+  color: #4b5563;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.mind-map-tool:hover,
+.mind-map-zoom-button:hover {
+  background: #f3f4f6;
+  box-shadow: none;
+}
+.mind-map-paper {
+  background: #fff;
+}
+.mind-map-thread-layer path { opacity: .52; }
+.mind-map-paper-root {
+  border: 1px solid #cfd4dc;
+  max-width: 280px;
+  height: 116px;
+  padding: 26px 24px 18px;
+  border-color: #d1d5db;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #fff 0%, #f3f4f6 100%);
+  box-shadow: 0 8px 20px #11182712, inset 0 1px 0 #fff;
+}
+.mind-map-paper-root::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: -6px;
+  z-index: -1;
+  border: 1px solid #e5e7eb;
+  border-radius: 30px;
+  pointer-events: none;
+}
+.mind-map-paper-title {
+  color: #27303d;
+  font-family: var(--font);
+  font-size: 21px;
+  letter-spacing: .025em;
+}
+.mind-map-paper-doodle { display: none; }
+.mind-map-paper-heading {
+  color: var(--map-ink);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-bottom: 2px solid var(--map-line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  transform: none;
+}
+.mind-map-paper-branch:nth-child(even) .mind-map-paper-heading { transform: none; }
+.mind-map-paper-number {
+  color: var(--map-ink);
+  border-color: var(--map-line);
+  border-radius: 50%;
+  background: var(--map-soft);
+  font-family: var(--font);
+}
+.mind-map-paper-label {
+  font-family: var(--font);
+  color: #374151;
+}
+.mind-map-paper-leaf {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-bottom: 2px solid var(--map-line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+}
+.mind-map-paper-leaf::after { display: none; }
+.mind-map-paper-speaker { color: var(--map-ink); }
+.mind-map-paper-quote { color: #374151; }
+.mind-map-paper-pending,
+.mind-map-paper-empty { color: var(--text-secondary); }
+.mind-map-paper-empty > span { color: #9ca3af; }
+
+.mind-map-expanded-dialog,
+.mind-map-history-modal {
+  border-color: var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--shadow-modal);
+}
+.mind-map-expanded-bar { border-bottom: 1px solid var(--border); }
+.mind-map-expanded-title strong,
+.mind-map-history-head { color: var(--text); }
+.mind-map-expanded-title span,
+.mind-map-history-step,
+.mind-map-history-meta { color: var(--text-secondary); }
+.mind-map-history-launcher,
+.mind-map-history-close,
+.mind-map-history-btn {
+  color: #4b5563;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.mind-map-history-launcher { border-style: solid; }
+.mind-map-history-btn.is-active {
+  color: #374151;
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+.mind-map-history-range { accent-color: #6b7280; }
+
+/* 同一議題的多位名人觀點採雙欄並排，卡片尺寸維持固定。 */
+.mind-map-paper-branch[data-flow="up"] .mind-map-paper-heading,
+.mind-map-paper-branch[data-flow="down"] .mind-map-paper-heading {
+  margin-inline: auto;
+}
+.mind-map-paper-branch[data-flow="up"] .mind-map-paper-heading {
+  margin-top: 12px;
+}
+.mind-map-paper-branch[data-flow="down"] .mind-map-paper-heading {
+  margin-bottom: 12px;
+}
+.mind-map-paper-leaves,
+.mind-map-expanded-scroll .mind-map-paper-leaves {
+  display: grid;
+  grid-template-columns: repeat(var(--mind-map-leaf-columns, 1), minmax(0, 1fr));
+  gap: 10px 14px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.mind-map-paper-branch[data-side="left"] .mind-map-paper-leaves,
+.mind-map-expanded-scroll .mind-map-paper-branch[data-side="left"] .mind-map-paper-leaves {
+  margin: 0;
+  padding: 0;
+}
+.mind-map-paper-leaf,
+.mind-map-expanded-scroll .mind-map-paper-leaf {
+  width: 100%;
+  margin: 0;
+}
+.mind-map-paper-branch[data-center-last-leaf="true"] .mind-map-paper-leaf:last-child {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: calc((100% - 14px) / 2);
+}

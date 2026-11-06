@@ -82,15 +82,20 @@
   margin: 0 12px 8px;
   padding: 10px 16px;
   width: calc(100% - 24px);
-  border: 1px dashed #c4b5fd;
+  border: 1px dashed #b9cee9;
   border-radius: var(--radius-pill);
-  background: #faf5ff;
+  background: #f1f6fd;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  color: #6d28d9;
+  color: #4f6f99;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.btn-join:hover { background: #f3e8ff; }
+.btn-join:hover {
+  background: #e8f1fc;
+  border-color: #a9c3e4;
+  color: #3d5f89;
+}
 
 .history-lock {
   font-size: 0.75rem;
@@ -400,10 +405,12 @@
 }
 
 .sidebar-footer {
+  min-height: 90px;
   padding: 8px 10px 12px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 6px;
 }
 

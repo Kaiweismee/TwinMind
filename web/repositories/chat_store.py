@@ -137,6 +137,15 @@ def ensure_chat_schema() -> None:
                 "ALTER TABLE persons ADD COLUMN IF NOT EXISTS category TEXT;"
             )
             cur.execute(
+                "ALTER TABLE persons ADD COLUMN IF NOT EXISTS display_name_zh TEXT;"
+            )
+            cur.execute(
+                "ALTER TABLE persons ADD COLUMN IF NOT EXISTS display_name_en TEXT;"
+            )
+            cur.execute(
+                "ALTER TABLE persons ADD COLUMN IF NOT EXISTS display_bio TEXT;"
+            )
+            cur.execute(
                 """
                 ALTER TABLE chat_messages
                 ADD COLUMN IF NOT EXISTS retrieval_sources JSONB
@@ -280,7 +289,9 @@ def list_persons_feed() -> list[dict[str, Any]]:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT p.slug, p.name_zh, p.name_en, p.bio,
+                SELECT p.slug, p.name_zh, p.name_en,
+                       p.display_name_zh, p.display_name_en, p.display_bio,
+                       p.bio,
                        p.avatar_url, p.avatar_source, p.links, p.category,
                        COUNT(DISTINCT d.id) AS doc_count,
                        COUNT(DISTINCT c.id) AS chunk_count
@@ -288,7 +299,8 @@ def list_persons_feed() -> list[dict[str, Any]]:
                 LEFT JOIN documents d ON d.person_id = p.id
                 LEFT JOIN chunks c ON c.document_id = d.id
                 WHERE p.slug !~ '^user_'
-                GROUP BY p.id, p.slug, p.name_zh, p.name_en, p.bio,
+                GROUP BY p.id, p.slug, p.name_zh, p.name_en,
+                         p.display_name_zh, p.display_name_en, p.display_bio, p.bio,
                          p.avatar_url, p.avatar_source, p.links, p.category
                 ORDER BY p.name_zh;
                 """
@@ -302,7 +314,9 @@ def _fetch_members(cur, session_id: int) -> list[dict[str, Any]]:
     cur.execute(
         """
         SELECT m.person_slug, m.sort_order, m.topic_fit_score, m.debate_rounds,
-               p.name_zh, p.name_en, p.avatar_url, p.bio, p.category
+               COALESCE(p.display_name_zh, p.name_zh) AS name_zh,
+               COALESCE(p.display_name_en, p.name_en) AS name_en,
+               p.avatar_url, COALESCE(p.display_bio, p.bio) AS bio, p.category
         FROM chat_session_members m
         JOIN persons p ON p.slug = m.person_slug
         WHERE m.session_id = %s
@@ -366,7 +380,11 @@ def create_session(
             names: list[str] = []
             for slug in slugs:
                 cur.execute(
-                    "SELECT name_zh FROM persons WHERE slug = %s;", (slug,)
+                    """
+                    SELECT COALESCE(display_name_zh, name_zh) AS name_zh
+                    FROM persons WHERE slug = %s;
+                    """,
+                    (slug,),
                 )
                 person = cur.fetchone()
                 if not person:
@@ -445,7 +463,7 @@ def _enrich_session_rows(cur, rows: list[dict[str, Any]]) -> list[dict[str, Any]
             r["members_label"] = "、".join(m["name_zh"] for m in r["members"])
         if not r.get("members_label") and r.get("person_slug"):
             cur.execute(
-                "SELECT name_zh, avatar_url FROM persons WHERE slug = %s;",
+                "SELECT COALESCE(display_name_zh, name_zh) AS name_zh, avatar_url FROM persons WHERE slug = %s;",
                 (r["person_slug"],),
             )
             p = cur.fetchone()
@@ -487,7 +505,10 @@ def list_sessions(
                            COALESCE(s.pinned, FALSE) AS pinned,
                            (s.password_hash IS NOT NULL) AS has_password,
                            (
-                               SELECT string_agg(p.name_zh, '、' ORDER BY m.sort_order)
+                               SELECT string_agg(
+                                   COALESCE(p.display_name_zh, p.name_zh),
+                                   '、' ORDER BY m.sort_order
+                               )
                                FROM chat_session_members m
                                JOIN persons p ON p.slug = m.person_slug
                                WHERE m.session_id = s.id
@@ -521,7 +542,10 @@ def list_sessions(
                            COALESCE(s.pinned, FALSE) AS pinned,
                            (s.password_hash IS NOT NULL) AS has_password,
                            (
-                               SELECT string_agg(p.name_zh, '、' ORDER BY m.sort_order)
+                               SELECT string_agg(
+                                   COALESCE(p.display_name_zh, p.name_zh),
+                                   '、' ORDER BY m.sort_order
+                               )
                                FROM chat_session_members m
                                JOIN persons p ON p.slug = m.person_slug
                                WHERE m.session_id = s.id
@@ -556,7 +580,10 @@ def list_sessions(
                            COALESCE(s.pinned, FALSE) AS pinned,
                            FALSE AS has_password,
                            (
-                               SELECT string_agg(p.name_zh, '、' ORDER BY m.sort_order)
+                               SELECT string_agg(
+                                   COALESCE(p.display_name_zh, p.name_zh),
+                                   '、' ORDER BY m.sort_order
+                               )
                                FROM chat_session_members m
                                JOIN persons p ON p.slug = m.person_slug
                                WHERE m.session_id = s.id
@@ -1068,7 +1095,11 @@ def get_session(session_id: int) -> dict[str, Any] | None:
             members = _fetch_members(cur, session_id)
             if not members and session.get("person_slug"):
                 cur.execute(
-                    "SELECT name_zh, name_en FROM persons WHERE slug = %s;",
+                    """
+                    SELECT COALESCE(display_name_zh, name_zh) AS name_zh,
+                           COALESCE(display_name_en, name_en) AS name_en
+                    FROM persons WHERE slug = %s;
+                    """,
                     (session["person_slug"],),
                 )
                 p = cur.fetchone()
@@ -1164,7 +1195,7 @@ def list_messages(session_id: int) -> list[dict[str, Any]]:
                        m.retrieved_chunk_ids, m.guest_id,
                        COALESCE(m.retrieval_sources, '[]'::jsonb) AS retrieval_sources,
                        COALESCE(p.slug, m.role) AS person_slug,
-                       p.name_zh AS person_name_zh,
+                       COALESCE(p.display_name_zh, p.name_zh) AS person_name_zh,
                        p.avatar_url AS avatar_url,
                        g.display_name AS guest_name
                 FROM chat_messages m
@@ -1222,7 +1253,7 @@ def list_messages(session_id: int) -> list[dict[str, Any]]:
                 elif msg["role"] not in ("user", "assistant", "moderator", "system"):
                     if not msg.get("person_name_zh"):
                         cur.execute(
-                            "SELECT name_zh FROM persons WHERE slug = %s;",
+                            "SELECT COALESCE(display_name_zh, name_zh) AS name_zh FROM persons WHERE slug = %s;",
                             (msg["role"],),
                         )
                         p = cur.fetchone()
@@ -1300,7 +1331,7 @@ def add_message(
             name_zh = None
             if slug_for_person:
                 cur.execute(
-                    "SELECT id, name_zh FROM persons WHERE slug = %s;",
+                    "SELECT id, COALESCE(display_name_zh, name_zh) AS name_zh FROM persons WHERE slug = %s;",
                     (slug_for_person,),
                 )
                 row = cur.fetchone()

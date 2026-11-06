@@ -59,7 +59,14 @@ def get_person(slug: str) -> dict[str, Any] | None:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT slug, name_zh, name_en, bio, avatar_url, category
+                SELECT slug,
+                       COALESCE(display_name_zh, name_zh) AS name_zh,
+                       COALESCE(display_name_en, name_en) AS name_en,
+                       COALESCE(display_name_zh, name_zh) AS display_name_zh,
+                       COALESCE(display_name_en, name_en) AS display_name_en,
+                       COALESCE(display_bio, bio) AS display_bio,
+                       COALESCE(display_bio, bio) AS bio,
+                       avatar_url, avatar_source, category
                 FROM persons
                 WHERE slug = %s;
                 """,
@@ -97,7 +104,7 @@ def list_threads(user_id: int, *, limit: int = 80) -> list[dict[str, Any]]:
             cur.execute(
                 """
                 SELECT m.person_slug,
-                       p.name_zh AS person_name_zh,
+                       COALESCE(p.display_name_zh, p.name_zh) AS person_name_zh,
                        p.avatar_url,
                        (
                            SELECT lm.content
@@ -113,7 +120,7 @@ def list_threads(user_id: int, *, limit: int = 80) -> list[dict[str, Any]]:
                 FROM user_person_chat_messages m
                 JOIN persons p ON p.slug = m.person_slug
                 WHERE m.user_id = %s
-                GROUP BY m.person_slug, p.name_zh, p.avatar_url, m.user_id
+                GROUP BY m.person_slug, p.display_name_zh, p.name_zh, p.avatar_url, m.user_id
                 ORDER BY MAX(m.created_at) DESC
                 LIMIT %s;
                 """,
@@ -251,8 +258,8 @@ def generate_reply(
     top_k: int = 10,
 ) -> str:
     slug = person.get("slug") or ""
-    name_zh = person.get("name_zh") or slug
-    bio = (person.get("bio") or "").strip()
+    name_zh = person.get("display_name_zh") or person.get("name_zh") or slug
+    bio = (person.get("display_bio") or person.get("bio") or "").strip()
     att_ctx = twin_chat._attachment_context(attachments)
     query = (user_text or "").strip() or att_ctx or name_zh
     context = _rag_context(slug, query, top_k)
